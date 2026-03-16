@@ -288,7 +288,12 @@ function parseCSV(text, fileName) {
 
     const sku  = get('sku').trim();
     const name = get('name').trim();
-    if (!sku || !name || sku.length > 80) continue;
+    // Rejeita SKUs inválidos: CSS, HTML, espaços, muito longos
+    if (!sku || !name) continue;
+    if (sku.length > 60) continue;
+    if (sku.includes(' ') || sku.includes(':') || sku.includes(';') || sku.includes('<') || sku.includes('>')) continue;
+    if (sku.includes('margin') || sku.includes('color') || sku.includes('font') || sku.includes('padding')) continue;
+    if (!/^[A-Za-z0-9_\-\.]+$/.test(sku)) continue;
 
     const w = parseNum(get('width'));
     const h = parseNum(get('height'));
