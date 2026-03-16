@@ -25,26 +25,23 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const LOCK_TTL_MS = Number(process.env.LOCK_TTL_MS || 20000);
 const ORDER_SEQ_PAD = Number(process.env.ORDER_SEQ_PAD || 4);
 
-let serviceAccount;
-if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-  // Railway: lê do environment variable
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-} else {
-  // Local: lê do arquivo
-  const SERVICE_ACCOUNT_PATH =
-    process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
-    path.join(__dirname, 'keys', 'firebase-service-account.json');
-  if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
-    console.error(`\n[ERROR] Firebase service account não encontrado em: ${SERVICE_ACCOUNT_PATH}\n`);
-    process.exit(1);
-  }
-  serviceAccount = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'));
+const SERVICE_ACCOUNT_PATH =
+  process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+  path.join(__dirname, 'keys', 'firebase-service-account.json');
+
+if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+  console.error(
+    `\n[ERROR] Firebase service account JSON not found at: ${SERVICE_ACCOUNT_PATH}\n` +
+      `Create it (do NOT commit) and set FIREBASE_SERVICE_ACCOUNT_PATH in .env.\n`
+  );
+  process.exit(1);
 }
+
+const serviceAccount = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'));
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
-
 
 const db = admin.firestore();
 
@@ -903,6 +900,9 @@ app.post('/import/products', async (req, res, next) => {
       const sku  = safeTrim(p.sku);
       const name = safeTrim(p.name);
       if (!sku || !name) continue;
+      // Rejeita SKUs com CSS/HTML do campo Descrição Complementar do Bling
+      if (sku.length > 60) continue;
+      if (sku.includes(' ') || sku.includes(':') || sku.includes(';') || sku.includes('<') || sku.includes('>')) continue;
 
       function tokenize(v) {
         return safeTrim(v).toLowerCase()
