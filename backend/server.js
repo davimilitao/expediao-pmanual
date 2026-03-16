@@ -25,23 +25,40 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const LOCK_TTL_MS = Number(process.env.LOCK_TTL_MS || 20000);
 const ORDER_SEQ_PAD = Number(process.env.ORDER_SEQ_PAD || 4);
 
-const SERVICE_ACCOUNT_PATH =
-  process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
-  path.join(__dirname, 'keys', 'firebase-service-account.json');
 
-if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
-  console.error(
-    `\n[ERROR] Firebase service account JSON not found at: ${SERVICE_ACCOUNT_PATH}\n` +
-      `Create it (do NOT commit) and set FIREBASE_SERVICE_ACCOUNT_PATH in .env.\n`
-  );
-  process.exit(1);
+// --- INÍCIO DA CORREÇÃO PARA FIREBASE ---
+let serviceAccount;
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  // Tenta ler primeiro da variável de ambiente (Ambiente de Produção/Railway)
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    console.log('[INFO] Firebase inicializado via Variável de Ambiente.');
+  } catch (e) {
+    console.error('[ERROR] Erro ao dar parse no JSON da variável FIREBASE_SERVICE_ACCOUNT_JSON.');
+    process.exit(1);
+  }
+} else {
+  // Caso não exista a variável, procura o arquivo (Ambiente de Desenvolvimento Local)
+  const SERVICE_ACCOUNT_PATH =
+    process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+    path.join(__dirname, 'keys', 'firebase-service-account.json');
+
+  if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+    console.error(
+      `\n[ERROR] Firebase service account JSON não encontrado em: ${SERVICE_ACCOUNT_PATH}\n` +
+      `Para rodar local, crie o arquivo. Para rodar no Railway, verifique a variável FIREBASE_SERVICE_ACCOUNT_JSON.\n`
+    );
+    process.exit(1);
+  }
+  serviceAccount = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'));
+  console.log('[INFO] Firebase inicializado via arquivo local.');
 }
-
-const serviceAccount = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'));
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
+// --- FIM DA CORREÇÃO ---
 
 const db = admin.firestore();
 
