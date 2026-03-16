@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Finanças — Universo Compra Certa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar__left">
+      <div class="brand">Universo Compra Certa</div>
+      <div class="subtitle">Gestão de Despesas & Embalagens</div>
+    </div>
+    <div class="topbar__right">
+        <a class="link small" href="/index.html">← Voltar ao Painel</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h2>Novo Lançamento</h2>
+      <form id="expenseForm" class="grid2">
+        <div class="field">
+          <span>Descrição</span>
+          <input type="text" id="desc" placeholder="Ex: J3 Transportadora" required />
+        </div>
+        <div class="field">
+          <span>Valor (R$)</span>
+          <input type="number" step="0.01" id="valor" placeholder="0,00" required />
+        </div>
+        <div class="field">
+          <span>Data</span>
+          <input type="date" id="data" required />
+        </div>
+        <div class="field">
+          <span>Status</span>
+          <select id="status">
+            <option value="Pendente">Pendente</option>
+            <option value="Pago">Pago</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn--primary">Lançar Despesa</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="row row--space">
+        <h2>Histórico de Despesas</h2>
+        <button class="btn btn--ghost" onclick="syncSheets()">Sincronizar Google Sheets</button>
+      </div>
+      <div id="expenseList" class="list">
+        <div class="muted">Carregando despesas...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/financas.js"></script>
+</body>
+</html>

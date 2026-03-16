@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117; --surface: #161c2d; --surface2: #1e2640;
+      --line: rgba(255,255,255,0.07); --text: #e2e8f7;
+      --muted: #7a85a0; --blue: #3d8bff; --green: #00e676;
+      --red: #ff4060; --ml: #ffe600;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; display: flex; align-items: center; justify-content: center; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    }
+
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ml);
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .logo span { color: var(--muted); font-weight: 400; }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .field label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; }
+    .field input {
+      background: var(--surface2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: .15s;
+    }
+    .field input:focus { border-color: rgba(61,139,255,0.5); box-shadow: 0 0 0 3px rgba(61,139,255,0.1); }
+    .field input::placeholder { color: var(--muted); }
+
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: .15s;
+      letter-spacing: .3px;
+    }
+    .btn-login:hover { filter: brightness(1.15); }
+    .btn-login:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+
+    .error-msg {
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: rgba(255,64,96,.1);
+      border: 1px solid rgba(255,64,96,.3);
+      border-radius: 10px;
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 700;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+
+    .divider { height: 1px; background: var(--line); margin: 28px 0 20px; }
+    .version { text-align: center; font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">EXPEDICAO<span>/PRO</span></div>
+    <div class="subtitle">Faça login para continuar</div>
+
+    <div class="field">
+      <label>Usuário</label>
+      <input type="text" id="username" placeholder="seu usuário" autocomplete="username" />
+    </div>
+
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+
+    <button class="btn-login" id="btnLogin">Entrar</button>
+
+    <div class="error-msg" id="errorMsg">Usuário ou senha incorretos.</div>
+
+    <div class="divider"></div>
+    <div class="version">Universo Compra Certa © 2026</div>
+  </div>
+
+  <script>
+    const btn = document.getElementById('btnLogin');
+    const errEl = document.getElementById('errorMsg');
+
+    async function doLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Entrando…';
+      errEl.classList.remove('show');
+
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.token) {
+          localStorage.setItem('expedicao_token', data.token);
+          localStorage.setItem('expedicao_user', JSON.stringify({ username: data.username, role: data.role }));
+          window.location.href = '/pedidos';
+        } else {
+          errEl.textContent = data.error || 'Usuário ou senha incorretos.';
+          errEl.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = 'Entrar';
+        }
+      } catch (e) {
+        errEl.textContent = 'Erro de conexão. Tente novamente.';
+        errEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+      }
+    }
+
+    btn.addEventListener('click', doLogin);
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+</html>

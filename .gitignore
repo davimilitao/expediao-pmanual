@@ -1,0 +1,37 @@
+# ============================
+# Node
+# ============================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================
+# Environment
+# ============================
+.env
+.env.*
+
+# ============================
+# Firebase / Keys
+# ============================
+backend/keys/firebase-service-account.json
+
+# ============================
+# Uploads (fotos locais)
+# ============================
+public/uploads/
+
+# ============================
+# OS / Editor
+# ============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ============================
+# Logs
+# ============================
+logs/
+*.log

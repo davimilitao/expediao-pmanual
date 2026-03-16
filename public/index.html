@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:      #0d1117;
+      --surface: #161c2d;
+      --s2:      #1e2640;
+      --s3:      #242e4c;
+      --line:    rgba(255,255,255,0.07);
+      --text:    #e2e8f7;
+      --muted:   #7a85a0;
+      --muted2:  #4a5268;
+      --ml:      #ffe600;
+      --shop:    #ff6633;
+      --green:   #00e676;
+      --red:     #ff4060;
+      --blue:    #3d8bff;
+      --warn:    #ffb300;
+      --purple:  #a855f7;
+      --r: 12px; --r2: 18px;
+      --sh: 0 4px 24px rgba(0,0,0,.35);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+
+    /* TOPBAR */
+    .topbar {
+      height: 56px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+      position: sticky; top: 0; z-index: 20;
+    }
+    .topbar::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--ml),var(--blue),var(--shop)); }
+    .brand { font-family:'Space Mono',monospace; font-weight:700; font-size:15px; color:var(--ml); letter-spacing:1px; }
+    .brand span { color:var(--muted); font-weight:400; }
+    .topbar-right { display:flex; gap:10px; align-items:center; }
+    .clock { font-family:'Space Mono',monospace; font-size:13px; color:var(--muted); }
+    .user-chip { display:flex; align-items:center; gap:6px; background:var(--s2); border:1px solid var(--line); border-radius:999px; padding:4px 12px 4px 8px; font-size:12px; font-weight:700; cursor:pointer; }
+    .user-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green); }
+
+    /* PAGE */
+    .page { max-width:1100px; margin:0 auto; padding:20px 16px; display:flex; flex-direction:column; gap:20px; }
+
+    /* SECTION HEADER */
+    .sec-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .sec-title { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; }
+    .sec-action { font-size:12px; font-weight:700; color:var(--blue); text-decoration:none; }
+    .sec-action:hover { text-decoration:underline; }
+
+    /* STATUS CARDS */
+    .status-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    @media(max-width:600px) { .status-grid { grid-template-columns:1fr 1fr; } }
+
+    .status-card {
+      background:var(--surface); border:1px solid var(--line); border-radius:var(--r2);
+      padding:18px 20px; display:flex; flex-direction:column; gap:8px;
+      position:relative; overflow:hidden; cursor:pointer; text-decoration:none;
+      transition:.2s; color:var(--text);
+    }
+    .status-card:hover { transform:translateY(-2px); box-shadow:var(--sh); border-color:rgba(255,255,255,.12); }
+    .status-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:var(--r2) var(--r2) 0 0; }
+    .sc-pending::before  { background:var(--warn); }
+    .sc-picked::before   { background:var(--blue); }
+    .sc-packed::before   { background:var(--green); }
+    .sc-total::before    { background:var(--purple); }
+    .sc-ml::before       { background:var(--ml); }
+    .sc-shop::before     { background:var(--shop); }
+
+    .sc-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+    .sc-num { font-family:'Space Mono',monospace; font-size:38px; font-weight:700; line-height:1; }
+    .sc-pending .sc-num  { color:var(--warn); }
+    .sc-picked  .sc-num  { color:var(--blue); }
+    .sc-packed  .sc-num  { color:var(--green); }
+    .sc-total   .sc-num  { color:var(--purple); }
+    .sc-ml      .sc-num  { color:var(--ml); }
+    .sc-shop    .sc-num  { color:var(--shop); }
+
+    .sc-sub { font-size:12px; color:var(--muted2); }
+    .sc-glow { position:absolute; bottom:-20px; right:-10px; width:80px; height:80px; border-radius:50%; opacity:.07; }
+    .sc-pending .sc-glow  { background:var(--warn); }
+    .sc-picked  .sc-glow  { background:var(--blue); }
+    .sc-packed  .sc-glow  { background:var(--green); }
+    .sc-total   .sc-glow  { background:var(--purple); }
+    .sc-ml      .sc-glow  { background:var(--ml); }
+    .sc-shop    .sc-glow  { background:var(--shop); }
+
+    /* FLEX ALERT */
+    .flex-alert {
+      background: linear-gradient(135deg, rgba(255,230,0,.08), rgba(255,179,0,.04));
+      border: 1px solid rgba(255,230,0,.25);
+      border-radius: var(--r2);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .flex-alert.hidden { display:none; }
+    .flex-alert-icon { font-size:28px; flex-shrink:0; }
+    .flex-alert-body { flex:1; }
+    .flex-alert-title { font-weight:900; font-size:15px; color:var(--ml); }
+    .flex-alert-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+    .flex-alert-btn { background:var(--ml); color:#000; font-weight:900; font-size:13px; padding:9px 16px; border-radius:var(--r); border:none; cursor:pointer; text-decoration:none; white-space:nowrap; flex-shrink:0; transition:.15s; }
+    .flex-alert-btn:hover { filter:brightness(1.1); }
+
+    /* MÓDULOS */
+    .modules-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    @media(max-width:700px) { .modules-grid { grid-template-columns:repeat(2,1fr); } }
+
+    .mod-card {
+      background:var(--surface); border:1px solid var(--line); border-radius:var(--r2);
+      padding:18px 16px; display:flex; flex-direction:column; gap:8px;
+      text-decoration:none; color:var(--text); transition:.2s; position:relative; overflow:hidden;
+    }
+    .mod-card:hover { transform:translateY(-2px); box-shadow:var(--sh); border-color:rgba(255,255,255,.12); }
+    .mod-icon { font-size:26px; }
+    .mod-name { font-weight:900; font-size:14px; }
+    .mod-desc { font-size:11px; color:var(--muted); line-height:1.4; }
+    .mod-arrow { position:absolute; top:16px; right:16px; font-size:14px; color:var(--muted2); }
+
+    /* ÚLTIMOS EXPEDIDOS */
+    .order-feed { display:flex; flex-direction:column; gap:8px; }
+    .feed-item {
+      background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+      padding:12px 16px; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center;
+    }
+    .feed-id { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; }
+    .feed-meta { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; align-items:center; }
+    .feed-time { font-size:11px; color:var(--muted2); }
+    .feed-items { font-size:11px; color:var(--muted); }
+    .badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; }
+    .badge-ml   { background:rgba(255,230,0,.15); color:var(--ml); border:1px solid rgba(255,230,0,.3); }
+    .badge-shop { background:rgba(255,102,51,.15); color:var(--shop); border:1px solid rgba(255,102,51,.3); }
+    .badge-oth  { background:rgba(122,133,160,.15); color:var(--muted); border:1px solid var(--line); }
+    .badge-flex { background:rgba(255,230,0,.9); color:#000; font-weight:900; }
+    .badge-packed { background:rgba(0,230,118,.12); color:var(--green); border:1px solid rgba(0,230,118,.25); }
+
+    .feed-thumbs { display:flex; gap:4px; }
+    .feed-thumb { width:36px; height:36px; border-radius:8px; object-fit:cover; border:1px solid var(--line); background:var(--s2); }
+
+    .empty-feed { color:var(--muted2); font-size:13px; padding:20px; text-align:center; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); }
+
+    /* FUNIL */
+    .funnel { background:var(--surface); border:1px solid var(--line); border-radius:var(--r2); padding:20px; }
+    .funnel-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    .funnel-row:last-child { margin-bottom:0; }
+    .funnel-label { font-size:12px; font-weight:700; color:var(--muted); width:90px; flex-shrink:0; }
+    .funnel-bar-bg { flex:1; height:28px; background:var(--s2); border-radius:8px; overflow:hidden; position:relative; }
+    .funnel-bar-fill { height:100%; border-radius:8px; transition:width .6s cubic-bezier(.4,0,.2,1); display:flex; align-items:center; padding-left:10px; font-size:12px; font-weight:900; min-width:28px; }
+    .funnel-pending .funnel-bar-fill { background:linear-gradient(90deg,rgba(255,179,0,.6),rgba(255,179,0,.3)); color:var(--warn); }
+    .funnel-picked  .funnel-bar-fill { background:linear-gradient(90deg,rgba(61,139,255,.6),rgba(61,139,255,.3)); color:var(--blue); }
+    .funnel-packed  .funnel-bar-fill { background:linear-gradient(90deg,rgba(0,230,118,.6),rgba(0,230,118,.3)); color:var(--green); }
+    .funnel-num { font-family:'Space Mono',monospace; font-size:15px; font-weight:700; width:36px; text-align:right; flex-shrink:0; }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(70px); background:var(--s2); border:1px solid var(--line); border-radius:var(--r2); padding:11px 20px; font-weight:700; font-size:14px; box-shadow:0 8px 32px rgba(0,0,0,.5); z-index:100; transition:transform .25s,opacity .25s; opacity:0; white-space:nowrap; pointer-events:none; }
+    .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+    .toast.err { border-color:rgba(255,64,96,.4); color:var(--red); }
+
+    /* LAST UPDATE */
+    .last-update { font-size:11px; color:var(--muted2); text-align:center; padding-bottom:12px; }
+
+    /* SKELETON */
+    .skel { background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; height:38px; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* DIVIDER */
+    .divider { height:1px; background:var(--line); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">EXPEDICAO<span>/PRO</span></div>
+  <div class="topbar-right">
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="user-chip" id="userChip" onclick="doLogout()">
+      <span class="user-dot"></span>
+      <span id="userName">…</span>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ALERTA FLEX -->
+  <div class="flex-alert hidden" id="flexAlert">
+    <div class="flex-alert-icon">🔥</div>
+    <div class="flex-alert-body">
+      <div class="flex-alert-title" id="flexAlertTitle">Pedidos FLEX aguardando separação!</div>
+      <div class="flex-alert-sub">Pedidos prioritários precisam de atenção imediata</div>
+    </div>
+    <a class="flex-alert-btn" href="/pedidos">Ver agora →</a>
+  </div>
+
+  <!-- STATUS CARDS -->
+  <div>
+    <div class="sec-header">
+      <span class="sec-title">Status do Dia</span>
+      <span class="clock-date" id="dateLabel" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="status-grid">
+      <a class="status-card sc-pending" href="/pedidos">
+        <div class="sc-label">A Separar</div>
+        <div class="sc-num" id="numPending"><div class="skel"></div></div>
+        <div class="sc-sub" id="subPending">pedidos aguardando</div>
+        <div class="sc-glow"></div>
+      </a>
+      <a class="status-card sc-picked" href="/pedidos">
+        <div class="sc-label">Separados</div>
+        <div class="sc-num" id="numPicked"><div class="skel"></div></div>
+        <div class="sc-sub">prontos para expedir</div>
+        <div class="sc-glow"></div>
+      </a>
+      <a class="status-card sc-packed" href="/pedidos">
+        <div class="sc-label">Expedidos</div>
+        <div class="sc-num" id="numPacked"><div class="skel"></div></div>
+        <div class="sc-sub">enviados hoje</div>
+        <div class="sc-glow"></div>
+      </a>
+      <a class="status-card sc-total" href="/pedidos">
+        <div class="sc-label">Total Geral</div>
+        <div class="sc-num" id="numTotal"><div class="skel"></div></div>
+        <div class="sc-sub">pedidos no sistema</div>
+        <div class="sc-glow"></div>
+      </a>
+      <a class="status-card sc-ml" href="/pedidos">
+        <div class="sc-label">Mercado Livre</div>
+        <div class="sc-num" id="numML"><div class="skel"></div></div>
+        <div class="sc-sub" id="subML">pedidos</div>
+        <div class="sc-glow"></div>
+      </a>
+      <a class="status-card sc-shop" href="/pedidos">
+        <div class="sc-label">Shopee</div>
+        <div class="sc-num" id="numShop"><div class="skel"></div></div>
+        <div class="sc-sub" id="subShop">pedidos</div>
+        <div class="sc-glow"></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- FUNIL + EXPEDIDOS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+    <!-- FUNIL -->
+    <div>
+      <div class="sec-header"><span class="sec-title">Funil de Separação</span></div>
+      <div class="funnel">
+        <div class="funnel-row funnel-pending">
+          <div class="funnel-label">A Separar</div>
+          <div class="funnel-bar-bg"><div class="funnel-bar-fill" id="fbarPending" style="width:0%">–</div></div>
+          <div class="funnel-num" id="fnumPending">–</div>
+        </div>
+        <div class="funnel-row funnel-picked">
+          <div class="funnel-label">Separado</div>
+          <div class="funnel-bar-bg"><div class="funnel-bar-fill" id="fbarPicked" style="width:0%">–</div></div>
+          <div class="funnel-num" id="fnumPicked">–</div>
+        </div>
+        <div class="funnel-row funnel-packed">
+          <div class="funnel-label">Expedido</div>
+          <div class="funnel-bar-bg"><div class="funnel-bar-fill" id="fbarPacked" style="width:0%">–</div></div>
+          <div class="funnel-num" id="fnumPacked">–</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ÚLTIMOS EXPEDIDOS -->
+    <div>
+      <div class="sec-header">
+        <span class="sec-title">Últimos Expedidos</span>
+        <a class="sec-action" href="/pedidos">Ver todos →</a>
+      </div>
+      <div class="order-feed" id="feedPacked">
+        <div class="empty-feed">Carregando…</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MÓDULOS -->
+  <div>
+    <div class="sec-header"><span class="sec-title">Módulos do Sistema</span></div>
+    <div class="modules-grid">
+      <a class="mod-card" href="/pedidos">
+        <div class="mod-icon">📦</div>
+        <div class="mod-name">Pedidos do Dia</div>
+        <div class="mod-desc">Separação com scanner, fotos e bipe sonoro</div>
+        <div class="mod-arrow">→</div>
+      </a>
+      <a class="mod-card" href="/manual">
+        <div class="mod-icon">✏️</div>
+        <div class="mod-name">Criar Pedido</div>
+        <div class="mod-desc">Monte pedidos manualmente por SKU ou EAN</div>
+        <div class="mod-arrow">→</div>
+      </a>
+      <a class="mod-card" href="/admin">
+        <div class="mod-icon">🖼️</div>
+        <div class="mod-name">Admin Produtos</div>
+        <div class="mod-desc">Fotos, localização e notas dos produtos</div>
+        <div class="mod-arrow">→</div>
+      </a>
+      <a class="mod-card" href="/financas">
+        <div class="mod-icon">💰</div>
+        <div class="mod-name">Finanças</div>
+        <div class="mod-desc">Despesas, embalagens e lançamentos</div>
+        <div class="mod-arrow">→</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="last-update">Atualiza automaticamente a cada 15s · <span id="lastUpdate">–</span></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const TERMINAL_KEY = 'expedicao_pro_terminal_id';
+function getTerminalId() {
+  let id = localStorage.getItem(TERMINAL_KEY);
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem(TERMINAL_KEY, id); }
+  return id;
+}
+const terminalId = getTerminalId();
+
+async function api(path, opts={}) {
+  const token = localStorage.getItem('expedicao_token') || '';
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'content-type':'application/json', 'x-terminal-id':terminalId, 'authorization':`Bearer ${token}`, ...(opts.headers||{}) }
+  });
+  const d = await res.json().catch(()=>({}));
+  if (res.status === 401) { window.location.href = '/login'; return null; }
+  if (!res.ok) throw new Error(d.error||`HTTP ${res.status}`);
+  return d;
+}
+
+function esc(s) { return (s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]); }
+
+// CLOCK
+function tick() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('pt-BR');
+  document.getElementById('dateLabel').textContent = now.toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long'});
+}
+setInterval(tick, 1000); tick();
+
+// USER
+const userRaw = localStorage.getItem('expedicao_user');
+if (userRaw) {
+  try {
+    const u = JSON.parse(userRaw);
+    document.getElementById('userName').textContent = u.username || 'usuário';
+  } catch {}
+}
+
+function doLogout() {
+  if (!confirm('Sair do sistema?')) return;
+  localStorage.removeItem('expedicao_token');
+  localStorage.removeItem('expedicao_user');
+  window.location.href = '/login';
+}
+
+// TOAST
+let _tt=null;
+function toast(msg,type='err'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`toast show ${type}`;
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// BADGE HTML
+function mkBadge(m) {
+  if (m==='MERCADO_LIVRE') return `<span class="badge badge-ml">ML</span>`;
+  if (m==='SHOPEE')        return `<span class="badge badge-shop">SHOPEE</span>`;
+  return `<span class="badge badge-oth">${esc(m)}</span>`;
+}
+function fmtTime(ms) {
+  if (!ms) return '';
+  return new Date(ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+// LOAD DASHBOARD
+async function loadDashboard() {
+  try {
+    const [pending, picked, packed] = await Promise.all([
+      api('/orders/list?status=pending&limit=80'),
+      api('/orders/list?status=picked&limit=80'),
+      api('/orders/list?status=packed&limit=20'),
+    ]);
+    if (!pending || !picked || !packed) return;
+
+    const np = pending.items?.length || 0;
+    const ni = picked.items?.length  || 0;
+    const nk = packed.items?.length  || 0;
+    const total = np + ni + nk;
+
+    // conta por marketplace (pending + picked + packed)
+    const allOrders = [...(pending.items||[]), ...(picked.items||[]), ...(packed.items||[])];
+    const nML   = allOrders.filter(o => o.marketplace === 'MERCADO_LIVRE').length;
+    const nShop = allOrders.filter(o => o.marketplace === 'SHOPEE').length;
+
+    // FLEX pendentes
+    const flexPending = (pending.items||[]).filter(o => o.isPriority);
+
+    // Atualiza cards
+    document.getElementById('numPending').textContent = np;
+    document.getElementById('numPicked').textContent  = ni;
+    document.getElementById('numPacked').textContent  = nk;
+    document.getElementById('numTotal').textContent   = total;
+    document.getElementById('numML').textContent      = nML;
+    document.getElementById('numShop').textContent    = nShop;
+
+    document.getElementById('subPending').textContent = `pedido${np!==1?'s':''} aguardando`;
+    document.getElementById('subML').textContent      = `pedido${nML!==1?'s':''}`;
+    document.getElementById('subShop').textContent    = `pedido${nShop!==1?'s':''}`;
+
+    // FLEX ALERT
+    const alert = document.getElementById('flexAlert');
+    if (flexPending.length > 0) {
+      alert.classList.remove('hidden');
+      document.getElementById('flexAlertTitle').textContent =
+        `${flexPending.length} pedido${flexPending.length>1?'s':''} FLEX aguardando separação!`;
+    } else {
+      alert.classList.add('hidden');
+    }
+
+    // FUNIL
+    const maxF = Math.max(np, ni, nk, 1);
+    const setFunnel = (barId, numId, val) => {
+      const pct = Math.max((val/maxF)*100, val>0?8:0);
+      document.getElementById(barId).style.width = `${pct}%`;
+      document.getElementById(barId).textContent = val;
+      document.getElementById(numId).textContent = val;
+    };
+    setFunnel('fbarPending','fnumPending', np);
+    setFunnel('fbarPicked', 'fnumPicked',  ni);
+    setFunnel('fbarPacked', 'fnumPacked',  nk);
+
+    // FEED EXPEDIDOS
+    const feed = document.getElementById('feedPacked');
+    const packedList = (packed.items||[]).slice(0,6);
+    if (!packedList.length) {
+      feed.innerHTML = '<div class="empty-feed">Nenhum pedido expedido ainda.</div>';
+    } else {
+      feed.innerHTML = '';
+      for (const o of packedList) {
+        const its    = Array.isArray(o.items) ? o.items : [];
+        const total  = its.reduce((a,it)=>a+Number(it.qty||0),0);
+        const thumbs = its.slice(0,3).map(it=>{
+          const src = it.image||'/assets/placeholder.png';
+          return `<img class="feed-thumb" src="${esc(src)}" onerror="this.src='/assets/placeholder.png'" alt="">`;
+        }).join('');
+
+        const div = document.createElement('div');
+        div.className = 'feed-item';
+        div.innerHTML = `
+          <div>
+            <div class="feed-id">${o.isPriority?'🔥 ':''}${esc(o.id)}</div>
+            <div class="feed-meta">
+              ${mkBadge(o.marketplace)}
+              ${o.isPriority?'<span class="badge badge-flex">FLEX</span>':''}
+              <span class="badge badge-packed">Expedido</span>
+              <span class="feed-time">🕐 ${fmtTime(o.updatedAtMs||o.createdAtMs)}</span>
+              <span class="feed-items">${total} item${total!==1?'s':''}</span>
+            </div>
+          </div>
+          <div class="feed-thumbs">${thumbs}</div>
+        `;
+        feed.appendChild(div);
+      }
+    }
+
+    // LAST UPDATE
+    document.getElementById('lastUpdate').textContent =
+      `atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+
+  } catch(e) {
+    toast(`Erro ao carregar: ${e.message}`);
+  }
+}
+
+// INIT
+loadDashboard();
+setInterval(loadDashboard, 15000);
+</script>
+</body>
+</html>

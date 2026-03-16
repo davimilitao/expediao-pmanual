@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Criar Pedido — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:      #0d1117;
+      --surface: #161c2d;
+      --s2:      #1e2640;
+      --s3:      #242e4c;
+      --line:    rgba(255,255,255,0.07);
+      --text:    #e2e8f7;
+      --muted:   #7a85a0;
+      --muted2:  #4a5268;
+      --ml:      #ffe600;
+      --shop:    #ff6633;
+      --green:   #00e676;
+      --red:     #ff4060;
+      --blue:    #3d8bff;
+      --warn:    #ffb300;
+      --r: 12px; --r2: 16px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100%; }
+
+    /* TOPBAR */
+    .topbar { height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; background:var(--surface); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; }
+    .topbar::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--ml),var(--blue),var(--shop)); }
+    .brand { font-family:'Space Mono',monospace; font-weight:700; font-size:15px; color:var(--ml); letter-spacing:1px; }
+    .brand span { color:var(--muted); font-weight:400; }
+    .topbar-right { display:flex; gap:8px; align-items:center; }
+
+    /* LAYOUT */
+    .page { max-width: 860px; margin: 0 auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* CARD */
+    .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r2); padding:20px; }
+    .card-title { font-size:16px; font-weight:900; margin-bottom:16px; }
+
+    /* INPUTS */
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .field label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+    input[type=text], input[type=number], select {
+      background:var(--s2); border:1px solid var(--line); border-radius:var(--r);
+      padding:10px 12px; color:var(--text); font-family:'DM Sans',sans-serif;
+      font-size:14px; outline:none; width:100%; transition:.15s;
+    }
+    input:focus, select:focus { border-color:rgba(61,139,255,.45); box-shadow:0 0 0 3px rgba(61,139,255,.1); }
+    input::placeholder { color:var(--muted2); }
+
+    /* GRID */
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media(max-width:600px) { .grid2 { grid-template-columns:1fr; } }
+
+    /* BUTTONS */
+    .btn { padding:10px 16px; border-radius:var(--r); border:1px solid var(--line); cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:14px; transition:.15s; }
+    .btn:disabled { opacity:.35; cursor:not-allowed; }
+    .btn-ghost   { background:var(--s2); color:var(--muted); }
+    .btn-ghost:not(:disabled):hover { background:var(--s3); color:var(--text); }
+    .btn-primary { background:var(--blue); color:#fff; border-color:transparent; }
+    .btn-primary:not(:disabled):hover { filter:brightness(1.15); }
+    .btn-danger  { background:rgba(255,64,96,.15); color:var(--red); border-color:rgba(255,64,96,.3); }
+    .btn-danger:not(:disabled):hover { background:rgba(255,64,96,.25); }
+
+    /* MARKETPLACE */
+    .mkt-group { display:flex; gap:8px; flex-wrap:wrap; }
+    .mkt-btn {
+      padding:9px 18px; border-radius:var(--r); border:1px solid var(--line);
+      background:var(--s2); color:var(--muted); cursor:pointer;
+      font-family:'DM Sans',sans-serif; font-weight:700; font-size:13px;
+      transition:.15s;
+    }
+    .mkt-btn.active-ml   { background:rgba(255,230,0,.15); color:var(--ml); border-color:rgba(255,230,0,.4); }
+    .mkt-btn.active-shop { background:rgba(255,102,51,.15); color:var(--shop); border-color:rgba(255,102,51,.4); }
+    .mkt-btn.active-oth  { background:var(--s3); color:var(--text); border-color:rgba(255,255,255,.15); }
+
+    /* PRIORITY TOGGLE */
+    .priority-row { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--s2); border-radius:var(--r); border:1px solid var(--line); margin-top:12px; }
+    .toggle { position:relative; width:42px; height:24px; background:var(--s3); border:1px solid var(--line); border-radius:999px; cursor:pointer; transition:.2s; flex-shrink:0; }
+    .toggle.on { background:var(--ml); border-color:transparent; }
+    .toggle-knob { position:absolute; top:3px; left:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s; }
+    .toggle.on .toggle-knob { left:21px; background:#000; }
+    .priority-info { flex:1; }
+    .priority-title { font-size:13px; font-weight:700; }
+    .priority-hint  { font-size:11px; color:var(--muted); }
+    .badge-flex { background:rgba(255,230,0,.9); color:#000; font-weight:900; font-size:11px; padding:3px 9px; border-radius:999px; }
+
+    /* SEARCH ROW */
+    .search-row { display:flex; gap:8px; }
+    .search-row input { flex:1; }
+    .search-info { font-size:12px; color:var(--muted); margin-top:6px; min-height:18px; }
+
+    /* RESULT / CART ITEMS */
+    .item-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+    .item-card { background:var(--s2); border:1px solid var(--line); border-radius:var(--r); display:grid; grid-template-columns:60px 1fr auto; gap:0; overflow:hidden; }
+    .item-card-img { width:60px; height:60px; object-fit:cover; background:var(--s3); display:block; }
+    .item-card-info { padding:10px 12px; display:flex; flex-direction:column; justify-content:center; gap:4px; min-width:0; }
+    .item-card-name { font-weight:700; font-size:13px; line-height:1.3; }
+    .item-card-tags { display:flex; gap:5px; flex-wrap:wrap; }
+    .itag { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); background:var(--s3); border:1px solid var(--line); padding:2px 6px; border-radius:5px; }
+    .itag-bin { color:var(--warn); border-color:rgba(255,179,0,.25); background:rgba(255,179,0,.08); }
+    .item-card-actions { display:flex; align-items:center; gap:8px; padding:10px 12px; border-left:1px solid var(--line); background:var(--s3); }
+    .qty-input { width:64px; background:var(--s2); border:1px solid var(--line); border-radius:8px; padding:7px 8px; color:var(--text); font-family:'Space Mono',monospace; font-size:14px; font-weight:700; text-align:center; outline:none; }
+    .qty-input:focus { border-color:rgba(61,139,255,.4); }
+
+    /* RECENTES */
+    .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+    .chip { background:var(--s2); border:1px solid var(--line); border-radius:8px; padding:5px 10px; cursor:pointer; transition:.15s; display:flex; gap:6px; align-items:center; }
+    .chip:hover { background:var(--s3); border-color:rgba(255,255,255,.12); }
+    .chip-name { font-size:12px; font-weight:700; color:var(--text); }
+    .chip-sku  { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); }
+
+    /* CART FOOTER */
+    .cart-footer { display:flex; justify-content:space-between; align-items:center; margin-top:16px; gap:10px; }
+    .cart-info { font-size:12px; color:var(--muted); min-height:18px; }
+
+    /* EMPTY */
+    .empty-msg { font-size:13px; color:var(--muted2); padding:8px 0; }
+
+    /* SECTION LABEL */
+    .section-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; margin-top:4px; }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(70px); background:var(--s2); border:1px solid var(--line); border-radius:var(--r2); padding:11px 20px; font-weight:700; font-size:14px; box-shadow:0 8px 32px rgba(0,0,0,.5); z-index:100; transition:transform .25s,opacity .25s; opacity:0; white-space:nowrap; }
+    .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+    .toast.ok  { border-color:rgba(0,230,118,.4); color:var(--green); }
+    .toast.err { border-color:rgba(255,64,96,.4); color:var(--red); }
+    .toast.info{ border-color:rgba(61,139,255,.4); color:var(--blue); }
+
+    .link { color:var(--blue); text-decoration:none; font-weight:700; font-size:13px; }
+    .link:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">EXPEDICAO<span>/PRO</span></div>
+  <div class="topbar-right">
+    <a class="link" href="/pedidos">← Pedidos do Dia</a>
+    <a class="link" href="/">Painel →</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- CONFIGURAÇÃO -->
+  <div class="card">
+    <div class="card-title">Novo Pedido</div>
+    <div class="grid2">
+      <div class="field">
+        <label>Marketplace</label>
+        <div class="mkt-group">
+          <button type="button" class="mkt-btn active-ml" data-val="MERCADO_LIVRE">Mercado Livre</button>
+          <button type="button" class="mkt-btn" data-val="SHOPEE">Shopee</button>
+          <button type="button" class="mkt-btn" data-val="OUTROS">Outros</button>
+        </div>
+        <input type="hidden" id="marketplace" value="MERCADO_LIVRE" />
+      </div>
+      <div class="field">
+        <label>Cliente (opcional)</label>
+        <input type="text" id="clienteNome" placeholder="Ex: João da Silva" />
+      </div>
+    </div>
+
+    <div class="priority-row" id="prioRow">
+      <div class="toggle" id="prioToggle">
+        <div class="toggle-knob"></div>
+      </div>
+      <div class="priority-info">
+        <div class="priority-title">Pedido FLEX / Prioritário</div>
+        <div class="priority-hint">Sobe ao topo e fica destacado em amarelo</div>
+      </div>
+      <span class="badge-flex" id="prioBadge" style="display:none">🔥 FLEX</span>
+      <input type="checkbox" id="isPriority" style="display:none" />
+    </div>
+  </div>
+
+  <!-- BUSCA -->
+  <div class="card">
+    <div class="card-title">Buscar Produto</div>
+    <div class="search-row">
+      <input type="text" id="searchQ" placeholder="Nome, SKU ou EAN…" />
+      <button class="btn btn-primary" id="btnSearch">Buscar</button>
+    </div>
+    <div class="search-info" id="searchInfo">Digite ao menos 3 letras ou um SKU/EAN</div>
+    <div class="item-list" id="searchResults"></div>
+
+    <div style="margin-top:14px;">
+      <div class="section-label">Últimos pesquisados</div>
+      <div class="chips" id="recentChips"></div>
+    </div>
+  </div>
+
+  <!-- CARRINHO -->
+  <div class="card">
+    <div class="card-title">Carrinho</div>
+    <div class="empty-msg" id="cartEmpty">Nenhum item adicionado.</div>
+    <div class="item-list" id="cartList"></div>
+    <div class="cart-footer">
+      <button class="btn btn-danger" id="btnClear">Limpar</button>
+      <div class="cart-info" id="createInfo"></div>
+      <button class="btn btn-primary" id="btnCreate">Criar Pedido</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const TERMINAL_KEY = 'expedicao_pro_terminal_id';
+const RECENT_KEY   = 'expedicao_recent_v2';
+const MIN_CHARS    = 3;
+const DEBOUNCE_MS  = 220;
+
+function getTerminalId() {
+  let id = localStorage.getItem(TERMINAL_KEY);
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem(TERMINAL_KEY, id); }
+  return id;
+}
+const terminalId = getTerminalId();
+
+async function api(path, opts={}) {
+  const token = localStorage.getItem('expedicao_token') || '';
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'content-type':'application/json', 'x-terminal-id':terminalId, 'authorization':`Bearer ${token}`, ...(opts.headers||{}) }
+  });
+  const d = await res.json().catch(()=>({}));
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  if (!res.ok) throw new Error(d.error||`HTTP ${res.status}`);
+  return d;
+}
+
+function esc(s) {
+  return (s??'').toString().replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);
+}
+
+// TOAST
+let _tt=null;
+function toast(msg,type='info'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`toast show ${type}`;
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+// STATE
+const state = {
+  results: [],
+  cart: new Map(),
+  searching: false,
+  lastQ: '',
+  debTimer: null,
+  activeId: 0,
+};
+
+// MARKETPLACE
+const mktBtns = document.querySelectorAll('.mkt-btn');
+const mktHidden = document.getElementById('marketplace');
+mktBtns.forEach(b => b.addEventListener('click', () => {
+  mktHidden.value = b.dataset.val;
+  mktBtns.forEach(x => x.className = 'mkt-btn');
+  if (b.dataset.val === 'MERCADO_LIVRE') b.classList.add('active-ml');
+  else if (b.dataset.val === 'SHOPEE')   b.classList.add('active-shop');
+  else                                   b.classList.add('active-oth');
+}));
+
+// PRIORITY
+const prioToggle = document.getElementById('prioToggle');
+const prioCheck  = document.getElementById('isPriority');
+const prioBadge  = document.getElementById('prioBadge');
+prioToggle.addEventListener('click', () => {
+  prioCheck.checked = !prioCheck.checked;
+  prioToggle.classList.toggle('on', prioCheck.checked);
+  prioBadge.style.display = prioCheck.checked ? 'inline-flex' : 'none';
+});
+
+// SEARCH
+async function doSearch() {
+  const q = document.getElementById('searchQ').value.trim();
+  const looksCode = q.length > 0 && !q.includes(' ');
+  if (q.length < MIN_CHARS && !looksCode) {
+    state.results = []; renderResults(); return;
+  }
+  if (q === state.lastQ) return;
+  state.lastQ = q;
+  state.searching = true;
+  document.getElementById('searchInfo').textContent = 'Buscando…';
+  const sid = ++state.activeId;
+  try {
+    const d = await api(`/products/search?q=${encodeURIComponent(q)}`);
+    if (sid !== state.activeId) return;
+    state.results = d?.items || [];
+  } catch(e) {
+    if (sid !== state.activeId) return;
+    state.results = []; toast(`Erro: ${e.message}`,'err');
+  } finally {
+    if (sid !== state.activeId) return;
+    state.searching = false;
+    renderResults();
+  }
+}
+
+function schedSearch() {
+  clearTimeout(state.debTimer);
+  state.debTimer = setTimeout(doSearch, DEBOUNCE_MS);
+}
+
+function renderResults() {
+  const box = document.getElementById('searchResults');
+  const info = document.getElementById('searchInfo');
+  box.innerHTML = '';
+  if (state.searching) { info.textContent = 'Buscando…'; return; }
+  if (!state.results.length) { info.textContent = state.lastQ ? 'Sem resultados.' : 'Digite ao menos 3 letras ou um SKU/EAN'; return; }
+  info.textContent = `${state.results.length} resultado(s)`;
+  for (const p of state.results) {
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML = `
+      <img class="item-card-img" src="${esc(p.image||'/assets/placeholder.png')}" onerror="this.src='/assets/placeholder.png'" alt="">
+      <div class="item-card-info">
+        <div class="item-card-name">${esc(p.name||'')}</div>
+        <div class="item-card-tags">
+          <span class="itag">SKU ${esc(p.sku||'')}</span>
+          <span class="itag">EAN ${esc(p.ean||'—')}</span>
+          ${p.bin?`<span class="itag itag-bin">📍 ${esc(p.bin)}</span>`:''}
+        </div>
+      </div>
+      <div class="item-card-actions">
+        <input class="qty-input" type="number" min="1" value="1" />
+        <button class="btn btn-primary" style="padding:8px 12px;font-size:13px;">+ Add</button>
+      </div>
+    `;
+    const qtyEl = card.querySelector('.qty-input');
+    card.querySelector('button').addEventListener('click', () => {
+      addToCart(p, Number(qtyEl.value||1));
+      pushRecent(p);
+      focusSearch(true);
+    });
+    box.appendChild(card);
+  }
+}
+
+// CART
+function addToCart(p, qty) {
+  const prev = state.cart.get(p.sku);
+  state.cart.set(p.sku, { ...p, qty: (prev?prev.qty:0) + (Number.isFinite(qty)?qty:1) });
+  toast(`Adicionado: ${p.sku} ×${qty}`,'ok');
+  renderCart();
+}
+
+function renderCart() {
+  const empty = document.getElementById('cartEmpty');
+  const list  = document.getElementById('cartList');
+  list.innerHTML = '';
+  const arr = Array.from(state.cart.values());
+  empty.style.display = arr.length ? 'none' : 'block';
+  for (const it of arr) {
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML = `
+      <img class="item-card-img" src="${esc(it.image||'/assets/placeholder.png')}" onerror="this.src='/assets/placeholder.png'" alt="">
+      <div class="item-card-info">
+        <div class="item-card-name">${esc(it.name||'')}</div>
+        <div class="item-card-tags">
+          <span class="itag">SKU ${esc(it.sku||'')}</span>
+          <span class="itag">EAN ${esc(it.ean||'—')}</span>
+          ${it.bin?`<span class="itag itag-bin">📍 ${esc(it.bin)}</span>`:''}
+        </div>
+      </div>
+      <div class="item-card-actions">
+        <input class="qty-input" type="number" min="1" value="${it.qty}" />
+        <button class="btn btn-danger" style="padding:8px 10px;font-size:13px;">✕</button>
+      </div>
+    `;
+    const qtyEl = card.querySelector('.qty-input');
+    qtyEl.addEventListener('change', () => state.cart.set(it.sku, {...it, qty: Number(qtyEl.value||1)}));
+    card.querySelector('button').addEventListener('click', () => { state.cart.delete(it.sku); renderCart(); });
+    list.appendChild(card);
+  }
+}
+
+// CREATE ORDER
+async function doCreate() {
+  const marketplace = mktHidden.value;
+  const clienteNome = document.getElementById('clienteNome').value.trim();
+  const isPriority  = document.getElementById('isPriority').checked;
+  const cart = Array.from(state.cart.values()).map(it=>({sku:it.sku,qty:it.qty}));
+  if (!cart.length) { toast('Carrinho vazio.','err'); return; }
+
+  const info = document.getElementById('createInfo');
+  info.textContent = 'Criando…';
+  try {
+    const d = await api('/orders/manual', { method:'POST', body:JSON.stringify({marketplace,clienteNome,isPriority,cart}) });
+    toast(`Pedido criado: ${d.orderId}`,'ok');
+    info.innerHTML = `✅ <strong>${esc(d.orderId)}</strong> — <a class="link" href="/pedidos">abrir pedidos</a>`;
+    state.cart.clear(); renderCart();
+  } catch(e) {
+    toast(`Erro: ${e.message}`,'err');
+    info.textContent = `Erro: ${e.message}`;
+  }
+}
+
+// RECENT
+function loadRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)||'[]'); } catch { return []; } }
+function saveRecent(l) { localStorage.setItem(RECENT_KEY, JSON.stringify(l.slice(0,10))); }
+function pushRecent(p) {
+  if (!p?.sku) return;
+  const l = loadRecent().filter(x=>x.sku!==p.sku);
+  l.unshift({sku:p.sku,name:p.name||''});
+  saveRecent(l); renderRecent();
+}
+function renderRecent() {
+  const el = document.getElementById('recentChips');
+  const list = loadRecent();
+  el.innerHTML = '';
+  if (!list.length) { el.innerHTML='<div style="font-size:12px;color:var(--muted2)">Nenhuma busca recente</div>'; return; }
+  for (const p of list) {
+    const btn = document.createElement('button');
+    btn.type='button'; btn.className='chip';
+    btn.innerHTML=`<span class="chip-name">${esc(p.name||'Produto')}</span><span class="chip-sku">${esc(p.sku)}</span>`;
+    btn.addEventListener('click', async () => {
+      document.getElementById('searchQ').value = p.sku;
+      clearTimeout(state.debTimer); await doSearch();
+      const found = state.results.find(r=>r.sku===p.sku)||state.results[0];
+      if (found) { addToCart(found,1); pushRecent(found); focusSearch(true); }
+    });
+    el.appendChild(btn);
+  }
+}
+
+function focusSearch(selectAll=false) {
+  const el = document.getElementById('searchQ');
+  el.focus(); if (selectAll) el.select();
+}
+
+// BIND
+document.getElementById('searchQ').addEventListener('input', schedSearch);
+document.getElementById('searchQ').addEventListener('keydown', async e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  if (state.results.length && !state.searching) {
+    addToCart(state.results[0],1); pushRecent(state.results[0]); focusSearch(true); return;
+  }
+  clearTimeout(state.debTimer); await doSearch();
+});
+document.getElementById('btnSearch').addEventListener('click', () => { clearTimeout(state.debTimer); doSearch(); });
+document.getElementById('btnClear').addEventListener('click', () => { state.cart.clear(); renderCart(); toast('Carrinho limpo','info'); });
+document.getElementById('btnCreate').addEventListener('click', doCreate);
+
+// INIT
+renderCart(); renderResults(); renderRecent(); focusSearch();
+</script>
+</body>
+</html>

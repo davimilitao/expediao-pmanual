@@ -1,0 +1,26 @@
+{
+  "name": "expedicao-pro-backend",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Expedição Pro — Pedido Manual (MVP) backend Node/Express + Firestore (Admin SDK)",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "import:products": "node scripts/import_products_csv.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.5.0",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.2",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

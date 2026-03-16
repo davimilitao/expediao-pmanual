@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Catálogo — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0d1117; --surface:#161c2d; --s2:#1e2640; --s3:#242e4c;
+      --line:rgba(255,255,255,0.07); --text:#e2e8f7; --muted:#7a85a0; --muted2:#4a5268;
+      --ml:#ffe600; --shop:#ff6633; --green:#00e676; --red:#ff4060;
+      --blue:#3d8bff; --warn:#ffb300; --purple:#a855f7;
+      --r:12px; --r2:18px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow:hidden;}
+
+    /* TOPBAR */
+    .topbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:relative;flex-shrink:0;}
+    .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ml),var(--blue),var(--shop));}
+    .brand{font-family:'Space Mono',monospace;font-weight:700;font-size:15px;color:var(--ml);letter-spacing:1px;}
+    .brand span{color:var(--muted);font-weight:400;}
+    .topbar-right{display:flex;gap:8px;align-items:center;}
+    .tlink{color:var(--blue);text-decoration:none;font-weight:700;font-size:13px;}
+    .tlink:hover{text-decoration:underline;}
+
+    /* LAYOUT */
+    .app{display:flex;flex-direction:column;height:100vh;}
+    .body{display:grid;grid-template-columns:240px 1fr;flex:1;overflow:hidden;}
+
+    /* SIDEBAR */
+    .sidebar{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+    .sidebar-search{padding:12px;}
+    .search-wrap{position:relative;}
+    .search-wrap input{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px 9px 34px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:.15s;}
+    .search-wrap input:focus{border-color:rgba(61,139,255,.45);}
+    .search-wrap input::placeholder{color:var(--muted2);}
+    .search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;}
+
+    .filter-scroll{flex:1;overflow-y:auto;padding:0 12px 16px;}
+    .filter-scroll::-webkit-scrollbar{width:3px;}
+    .filter-scroll::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px;}
+
+    .fg{margin-bottom:16px;}
+    .fg-label{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;padding:8px 0 6px;display:flex;align-items:center;gap:6px;}
+    .bling-tag{display:inline-flex;align-items:center;gap:3px;background:rgba(61,139,255,.1);border:1px solid rgba(61,139,255,.18);border-radius:999px;padding:1px 6px;font-size:9px;font-weight:700;color:var(--blue);}
+    .bling-tag::before{content:'⬡';}
+
+    .fc{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:8px;cursor:pointer;transition:.15s;user-select:none;border:1px solid transparent;}
+    .fc:hover{background:var(--s2);}
+    .fc.on{background:var(--s2);border-color:rgba(61,139,255,.25);}
+    .fc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .fc-label{font-size:12px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .fc-count{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);background:var(--s3);padding:1px 5px;border-radius:999px;flex-shrink:0;}
+
+    .clear-btn{font-size:11px;color:var(--blue);font-weight:700;cursor:pointer;padding:6px 8px;text-align:center;border-radius:8px;}
+    .clear-btn:hover{background:var(--s2);}
+
+    /* MAIN */
+    .main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+
+    .toolbar{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);background:var(--surface);flex-shrink:0;}
+    .toolbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .count-label{font-size:13px;color:var(--muted);}
+    .count-label strong{font-family:'Space Mono',monospace;color:var(--text);}
+
+    .af-wrap{display:flex;gap:5px;flex-wrap:wrap;}
+    .af-chip{display:flex;align-items:center;gap:4px;background:rgba(61,139,255,.12);border:1px solid rgba(61,139,255,.25);border-radius:999px;padding:2px 8px 2px 10px;font-size:11px;font-weight:700;color:var(--blue);}
+    .af-chip button{background:none;border:none;color:var(--blue);cursor:pointer;font-size:13px;line-height:1;padding:0;margin-left:2px;}
+
+    .view-btns{display:flex;gap:4px;}
+    .vb{background:var(--s2);border:1px solid var(--line);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:15px;color:var(--muted);transition:.15s;}
+    .vb.on{background:var(--s3);color:var(--text);}
+
+    /* GRID */
+    .content{flex:1;overflow-y:auto;padding:16px 18px;}
+    .content::-webkit-scrollbar{width:6px;}
+    .content::-webkit-scrollbar-thumb{background:var(--s2);border-radius:3px;}
+
+    .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;}
+
+    .pc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:.2s;}
+    .pc:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4);border-color:rgba(255,255,255,.1);}
+    .pc-img{width:100%;aspect-ratio:1;object-fit:cover;background:var(--s2);display:block;}
+    .pc-body{padding:9px 11px;}
+    .pc-sku{font-family:'Space Mono',monospace;font-size:9px;color:var(--blue);font-weight:700;margin-bottom:3px;}
+    .pc-name{font-size:12px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .pc-pills{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px;}
+    .pc-foot{padding:6px 11px;border-top:1px solid var(--line);background:var(--s2);display:flex;justify-content:space-between;align-items:center;}
+    .pc-stock{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;}
+    .pc-stock.ok{color:var(--green);}
+    .pc-stock.low{color:var(--warn);}
+    .pc-stock.zero{color:var(--muted2);}
+    .pc-dims{font-size:9px;color:var(--muted2);}
+
+    /* LIST */
+    .prod-list{display:flex;flex-direction:column;gap:7px;}
+    .pl{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:grid;grid-template-columns:56px 1fr auto;overflow:hidden;cursor:pointer;transition:.15s;}
+    .pl:hover{border-color:rgba(255,255,255,.1);background:var(--s2);}
+    .pl-img{width:56px;height:56px;object-fit:cover;background:var(--s2);display:block;}
+    .pl-info{padding:9px 13px;display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0;}
+    .pl-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+    .pl-sku{font-family:'Space Mono',monospace;font-size:10px;color:var(--blue);font-weight:700;}
+    .pl-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pl-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+    .pl-right{padding:9px 12px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:3px;border-left:1px solid var(--line);background:var(--s2);min-width:80px;}
+    .pl-stock{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;}
+    .pl-dims{font-size:9px;color:var(--muted2);text-align:right;}
+
+    /* PILLS */
+    .pill{font-size:9px;font-weight:700;padding:1px 5px;border-radius:999px;}
+    .pill-brand{background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.2);}
+    .pill-flex{background:rgba(255,230,0,.9);color:#000;}
+    .pill-full{background:rgba(61,139,255,.15);color:var(--blue);border:1px solid rgba(61,139,255,.25);}
+    .pill-agency{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2);}
+    .pill-group{background:var(--s3);color:var(--muted);border:1px solid var(--line);}
+
+    /* LOAD MORE */
+    .load-more{display:flex;justify-content:center;padding:20px 0;}
+    .lm-btn{background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:12px 28px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;color:var(--muted);transition:.15s;}
+    .lm-btn:hover{background:var(--s3);color:var(--text);}
+
+    /* EMPTY / LOADING */
+    .state-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:10px;color:var(--muted2);}
+    .state-msg .icon{font-size:44px;opacity:.2;}
+    .state-msg p{font-size:14px;}
+
+    /* SKELETON */
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .skel{background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+
+    /* MODAL */
+    .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;}
+    .modal.hidden{display:none;}
+    .modal-bd{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);}
+    .modal-panel{position:relative;width:min(680px,100%);max-height:90vh;background:var(--surface);border-radius:var(--r2);box-shadow:0 24px 80px rgba(0,0,0,.6);overflow:hidden;display:flex;flex-direction:column;}
+    .modal-hdr{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+    .modal-x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;flex-shrink:0;}
+    .modal-x:hover{background:var(--s2);}
+    .modal-body{overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;}
+    .modal-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .modal-photo{width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r);border:1px solid var(--line);background:var(--s2);}
+    .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
+    .info-box{background:var(--s2);border-radius:var(--r);padding:9px 11px;}
+    .info-lbl{font-size:9px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;}
+    .info-val{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;margin-top:3px;}
+    .info-val.blue{color:var(--blue);}
+    .info-val.green{color:var(--green);}
+    .info-val.warn{color:var(--warn);}
+    .info-val.red{color:var(--red);}
+    .info-val.muted{color:var(--muted);}
+    .section-badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 9px;font-size:10px;font-weight:700;}
+    .badge-bling{background:rgba(61,139,255,.1);border:1px solid rgba(61,139,255,.2);color:var(--blue);}
+    .badge-system{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.2);color:var(--green);}
+    .modal-footer{padding:12px 18px;border-top:1px solid var(--line);background:var(--s2);display:flex;gap:8px;}
+    .btn{padding:8px 14px;border-radius:var(--r);border:1px solid var(--line);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+    .btn-primary{background:var(--blue);color:#fff;border-color:transparent;}
+    .btn-primary:hover{filter:brightness(1.12);}
+    .btn-ghost{background:var(--s3);color:var(--muted);}
+    .btn-ghost:hover{color:var(--text);}
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">EXPEDICAO<span>/PRO</span></div>
+    <div class="topbar-right">
+      <a class="tlink" href="/">← Painel</a>
+      <a class="tlink" href="/admin">Admin</a>
+      <a class="tlink" href="/importar">Importar CSV</a>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- SIDEBAR FILTROS -->
+    <div class="sidebar">
+      <div class="sidebar-search">
+        <div class="search-wrap">
+          <span class="search-ico">🔍</span>
+          <input type="text" id="searchQ" placeholder="Buscar produto…" oninput="filter()" />
+        </div>
+      </div>
+
+      <div class="filter-scroll">
+        <div class="fg" id="fg-marca">
+          <div class="fg-label">Marca</div>
+        </div>
+        <div class="fg" id="fg-modalidade">
+          <div class="fg-label">Modalidade</div>
+        </div>
+        <div class="fg" id="fg-grupo">
+          <div class="fg-label">Grupo</div>
+        </div>
+
+        <div class="clear-btn" onclick="clearAll()">Limpar filtros</div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="count-label"><strong id="countNum">–</strong> produtos</div>
+          <div class="af-wrap" id="afWrap"></div>
+        </div>
+        <div class="view-btns">
+          <button class="vb on" id="vbGrid" onclick="setView('grid')" title="Grade">⊞</button>
+          <button class="vb" id="vbList" onclick="setView('list')" title="Lista">☰</button>
+        </div>
+      </div>
+
+      <div class="content" id="content">
+        <!-- preenchido pelo JS -->
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal hidden" id="modal">
+  <div class="modal-bd" onclick="closeModal()"></div>
+  <div class="modal-panel">
+    <div class="modal-hdr">
+      <div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--blue);font-weight:700;" id="mSku"></div>
+        <div style="font-size:17px;font-weight:900;margin-top:4px;line-height:1.3;" id="mName"></div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;" id="mPills"></div>
+      </div>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-photos" id="mPhotos"></div>
+      <div>
+        <div style="margin-bottom:8px;"><span class="section-badge badge-bling">⬡ Dados do Bling — somente leitura</span></div>
+        <div class="info-grid" id="mInfo"></div>
+      </div>
+      <div id="mSystem" style="display:none;">
+        <div style="margin-bottom:8px;"><span class="section-badge badge-system">● Dados do Sistema</span></div>
+        <div class="info-grid" id="mSystemInfo"></div>
+      </div>
+      <div id="mEmb" style="display:none;flex-direction:column;gap:6px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">🎁 Embalagens compatíveis</div>
+        <div id="mEmbList"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a class="btn btn-primary" id="mAdminLink" href="#">✏️ Editar no Admin</a>
+      <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const TK = 'expedicao_pro_terminal_id';
+function tid(){let i=localStorage.getItem(TK);if(!i){i=crypto.randomUUID();localStorage.setItem(TK,i);}return i;}
+
+async function api(path, opts={}){
+  const token = localStorage.getItem('expedicao_token')||'';
+  const res = await fetch(path,{...opts,headers:{'content-type':'application/json','x-terminal-id':tid(),'authorization':`Bearer ${token}`,...(opts.headers||{})}});
+  const d = await res.json().catch(()=>({}));
+  if(res.status===401){window.location.href='/login';return null;}
+  if(!res.ok) throw new Error(d.error||`HTTP ${res.status}`);
+  return d;
+}
+
+function esc(s){return(s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);}
+
+// ── STATE ──
+let ALL = [];        // todos os produtos carregados
+let EMBS = [];       // embalagens
+let FILTERED = [];   // resultado dos filtros atual
+let PAGE = 48;       // quantos renderizar
+let VIEW = 'grid';
+let ACTIVE = { marca:new Set(), modalidade:new Set(), grupo:new Set() };
+
+// ── BOOT ──
+async function boot() {
+  showSkeleton();
+  try {
+    const [pd, ed] = await Promise.all([
+      api('/products/all'),
+      api('/embalagens/list'),
+    ]);
+    if (!pd) return;
+
+    ALL = (pd.items || []).map(parseTags);
+    EMBS = ed?.items || [];
+
+    buildSidebar();
+    filter();
+  } catch(e) {
+    document.getElementById('content').innerHTML =
+      `<div class="state-msg"><div class="icon">⚠️</div><p>Erro ao carregar: ${esc(e.message)}</p></div>`;
+  }
+}
+
+// ── PARSE TAGS do Bling (formato: Grupo:X|Marca:Y|Modalidade:Z) ──
+function parseTags(p) {
+  const raw = p.tagsRaw || '';
+  const grupos = new Set(), marcas = new Set(), mods = new Set();
+  for (const block of raw.split(',')) {
+    for (const part of block.split('|')) {
+      const t = part.trim();
+      if      (t.startsWith('Grupo:'))      grupos.add(t.slice(6).trim());
+      else if (t.startsWith('Marca:'))      marcas.add(t.slice(6).trim());
+      else if (t.startsWith('Modalidade:')) mods.add(t.slice(11).trim());
+    }
+  }
+  // fallback: usa campo marca direto se não veio nas tags
+  // valida que não é CSS corrompido (ex: "letter-spacing: 0em")
+  const marcaClean = p.marca && !p.marca.includes(':') && !p.marca.includes(';') ? p.marca : '';
+  if (!marcas.size && marcaClean) marcas.add(marcaClean);
+  return { ...p, _grupos:[...grupos], _marcas:[...marcas], _mods:[...mods] };
+}
+
+// ── SIDEBAR ──
+function buildSidebar() {
+  const marcaSet = new Set(), modSet = new Set(), grupoSet = new Set();
+  ALL.forEach(p => {
+    p._marcas.forEach(m => marcaSet.add(m));
+    p._mods.forEach(m => modSet.add(m));
+    p._grupos.forEach(g => grupoSet.add(g));
+  });
+
+  const brandColors = {
+    'Safety 1st':'#3d8bff','Maxi-Cosi':'#a855f7','Buba':'#f59e0b',
+    'Tiny Love':'#00e676','Tutti Baby':'#ff6633','Cosco Kids':'#ff4060',
+    'Vittak':'#06b6d4','Pet Ninho':'#84cc16','Genérica':'#7a85a0'
+  };
+  const modColors = { 'FLEX':'#ffe600','FULL':'#3d8bff','Agência':'#00e676' };
+
+  fillGroup('fg-marca', [...marcaSet].sort(), 'marca', brandColors);
+  fillGroup('fg-modalidade', [...modSet].sort(), 'modalidade', modColors);
+  fillGroup('fg-grupo', [...grupoSet].sort(), 'grupo', {});
+
+  // chips de estoque removidos
+}
+
+function fillGroup(id, items, key, colors) {
+  const container = document.getElementById(id);
+  // mantém o label
+  const label = container.querySelector('.fg-label');
+  container.innerHTML = '';
+  container.appendChild(label);
+
+  if (!items.length) { container.style.display = 'none'; return; }
+
+  for (const item of items) {
+    const count = ALL.filter(p => {
+      if (key === 'marca')      return p._marcas.includes(item);
+      if (key === 'modalidade') return p._mods.includes(item);
+      if (key === 'grupo')      return p._grupos.includes(item);
+      return false;
+    }).length;
+
+    const color = colors[item] || 'var(--muted)';
+    const div = document.createElement('div');
+    div.className = 'fc';
+    div.dataset.key = key;
+    div.dataset.val = item;
+    div.innerHTML = `
+      <span class="fc-dot" style="background:${color}"></span>
+      <span class="fc-label">${esc(item)}</span>
+      <span class="fc-count">${count}</span>
+    `;
+    div.addEventListener('click', () => toggleFC(div));
+    container.appendChild(div);
+  }
+}
+
+function toggleFC(el) {
+  const key = el.dataset.key;
+  const val = el.dataset.val;
+  const set = ACTIVE[key];
+  if (set.has(val)) set.delete(val);
+  else              set.add(val);
+  el.classList.toggle('on', set.has(val));
+  filter();
+}
+
+function clearAll() {
+  Object.values(ACTIVE).forEach(s => s.clear());
+  document.querySelectorAll('.fc').forEach(el => el.classList.remove('on'));
+  document.getElementById('searchQ').value = '';
+  filter();
+}
+window.clearAll = clearAll;
+
+// ── FILTER (client-side, instantâneo) ──
+function filter() {
+  const q = (document.getElementById('searchQ').value || '').toLowerCase().trim();
+
+  FILTERED = ALL.filter(p => {
+    if (q) {
+      const hay = `${p.sku} ${p.name} ${p.ean}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (ACTIVE.marca.size      && ![...ACTIVE.marca].some(m => p._marcas.includes(m)))      return false;
+    if (ACTIVE.modalidade.size && ![...ACTIVE.modalidade].some(m => p._mods.includes(m)))    return false;
+    if (ACTIVE.grupo.size      && ![...ACTIVE.grupo].some(g => p._grupos.includes(g)))       return false;
+
+    return true;
+  });
+
+  PAGE = 48;
+  document.getElementById('countNum').textContent = FILTERED.length;
+  renderActiveChips();
+  render();
+}
+window.filter = filter;
+
+// ── ACTIVE CHIPS ──
+function renderActiveChips() {
+  const wrap = document.getElementById('afWrap');
+  wrap.innerHTML = '';
+  for (const [key, set] of Object.entries(ACTIVE)) {
+    for (const val of set) {
+      const chip = document.createElement('div');
+      chip.className = 'af-chip';
+      chip.innerHTML = `${esc(val)}<button onclick="removeActive('${esc(key)}','${esc(val)}')">✕</button>`;
+      wrap.appendChild(chip);
+    }
+  }
+}
+window.removeActive = (key, val) => {
+  ACTIVE[key].delete(val);
+  document.querySelectorAll(`.fc[data-key="${key}"][data-val="${val}"]`).forEach(el => el.classList.remove('on'));
+  filter();
+};
+
+// ── RENDER ──
+function render() {
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+
+  if (!FILTERED.length) {
+    content.innerHTML = `<div class="state-msg"><div class="icon">🔍</div><p>Nenhum produto com esses filtros.</p></div>`;
+    return;
+  }
+
+  const slice = FILTERED.slice(0, PAGE);
+
+  if (VIEW === 'grid') {
+    const grid = document.createElement('div');
+    grid.className = 'prod-grid';
+    slice.forEach(p => grid.appendChild(makeCard(p)));
+    content.appendChild(grid);
+  } else {
+    const list = document.createElement('div');
+    list.className = 'prod-list';
+    slice.forEach(p => list.appendChild(makeRow(p)));
+    content.appendChild(list);
+  }
+
+  if (FILTERED.length > PAGE) {
+    const remaining = FILTERED.length - PAGE;
+    const wrap = document.createElement('div');
+    wrap.className = 'load-more';
+    wrap.innerHTML = `<button class="lm-btn" onclick="loadMore()">Ver mais ${remaining} produtos ↓</button>`;
+    content.appendChild(wrap);
+  }
+}
+
+function loadMore() {
+  PAGE += 48;
+  render();
+  // scroll suave para o botão anterior
+}
+window.loadMore = loadMore;
+
+// ── CARD GRID ──
+function makeCard(p) {
+  const img   = bestPhoto(p);
+  const stock = Number(p.stock ?? 0);
+  const sc    = stock > 5 ? 'ok' : stock > 0 ? 'low' : 'zero';
+  const dims  = [p.width, p.height, p.depth].filter(Boolean).join('×');
+
+  const div = document.createElement('div');
+  div.className = 'pc';
+  div.innerHTML = `
+    <img class="pc-img" src="${esc(img)}" onerror="this.src='/assets/placeholder.png'" alt="" loading="lazy">
+    <div class="pc-body">
+      <div class="pc-sku">${esc(p.sku||'')}</div>
+      <div class="pc-name">${esc(p.name||'')}</div>
+      <div class="pc-pills">
+        ${p._marcas.map(m=>`<span class="pill pill-brand">${esc(m)}</span>`).join('')}
+        ${p._mods.map(m=>`<span class="pill ${m==='FLEX'?'pill-flex':m==='FULL'?'pill-full':'pill-agency'}">${esc(m)}</span>`).join('')}
+        ${p._grupos.map(g=>`<span class="pill pill-group">${esc(g)}</span>`).join('')}
+      </div>
+    </div>
+    <div class="pc-foot">
+      <span class="pc-dims" style="margin-left:auto;">${esc(dims ? dims+'cm' : '')}</span>
+    </div>
+  `;
+  div.addEventListener('click', () => openModal(p));
+  return div;
+}
+
+// ── ROW LIST ──
+function makeRow(p) {
+  const img   = bestPhoto(p);
+  const stock = Number(p.stock ?? 0);
+  const sc    = stock > 5 ? 'ok' : stock > 0 ? 'low' : 'zero';
+  const dims  = [p.width, p.height, p.depth].filter(Boolean).join('×');
+
+  const div = document.createElement('div');
+  div.className = 'pl';
+  div.innerHTML = `
+    <img class="pl-img" src="${esc(img)}" onerror="this.src='/assets/placeholder.png'" alt="" loading="lazy">
+    <div class="pl-info">
+      <div class="pl-top">
+        <span class="pl-sku">${esc(p.sku||'')}</span>
+        ${p._mods.map(m=>`<span class="pill ${m==='FLEX'?'pill-flex':m==='FULL'?'pill-full':'pill-agency'}">${esc(m)}</span>`).join('')}
+      </div>
+      <div class="pl-name">${esc(p.name||'')}</div>
+      <div class="pl-meta">
+        ${p._marcas.map(m=>`<span class="pill pill-brand">${esc(m)}</span>`).join('')}
+        ${p._grupos.map(g=>`<span class="pill pill-group">${esc(g)}</span>`).join('')}
+        ${p.ean?`<span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted2);">${esc(p.ean)}</span>`:''}
+      </div>
+    </div>
+    <div class="pl-right">
+
+      <span class="pl-dims">${dims?esc(dims)+'cm':''}</span>
+      ${p.weight?`<span style="font-size:9px;color:var(--muted2);">${p.weight}kg</span>`:''}
+    </div>
+  `;
+  div.addEventListener('click', () => openModal(p));
+  return div;
+}
+
+function bestPhoto(p) {
+  const ov = p.override || {};
+  return (Array.isArray(ov.stockPhotos) && ov.stockPhotos[0])
+    || p.displayImage
+    || (Array.isArray(p.images) && p.images[0])
+    || '/assets/placeholder.png';
+}
+
+// ── VIEW ──
+function setView(v) {
+  VIEW = v;
+  document.getElementById('vbGrid').classList.toggle('on', v === 'grid');
+  document.getElementById('vbList').classList.toggle('on', v === 'list');
+  render();
+}
+window.setView = setView;
+
+// ── MODAL ──
+function openModal(p) {
+  const ov    = p.override || {};
+  const stock = Number(p.stock ?? 0);
+  const sc    = stock > 5 ? 'green' : stock > 0 ? 'warn' : 'red';
+  const dims  = [p.width, p.height, p.depth].filter(Boolean);
+
+  document.getElementById('mSku').textContent  = p.sku || '';
+  document.getElementById('mName').textContent = p.name || '';
+  document.getElementById('mAdminLink').href   = '/admin';
+
+  // Pills
+  document.getElementById('mPills').innerHTML = `
+    ${p._marcas.map(m=>`<span class="pill pill-brand">${esc(m)}</span>`).join('')}
+    ${p._mods.map(m=>`<span class="pill ${m==='FLEX'?'pill-flex':m==='FULL'?'pill-full':'pill-agency'}">${esc(m)}</span>`).join('')}
+    ${p._grupos.map(g=>`<span class="pill pill-group">${esc(g)}</span>`).join('')}
+  `;
+
+  // Fotos
+  const stockPhotos = Array.isArray(ov.stockPhotos) ? ov.stockPhotos : [];
+  const boxPhotos   = Array.isArray(ov.boxPhotos)   ? ov.boxPhotos   : [];
+  const binPhoto    = ov.binPhoto || null;
+  const extImgs     = Array.isArray(p.images) ? p.images : [];
+  const allPhotos   = [
+    ...stockPhotos.slice(0,1),
+    ...boxPhotos.slice(0,1),
+    ...(binPhoto ? [binPhoto] : []),
+    ...extImgs.slice(0,3)
+  ].filter(Boolean).slice(0,6);
+
+  const photosEl = document.getElementById('mPhotos');
+  if (allPhotos.length) {
+    photosEl.style.display = 'grid';
+    photosEl.innerHTML = allPhotos.map(url =>
+      `<img class="modal-photo" src="${esc(url)}" onerror="this.src='/assets/placeholder.png'" alt="" loading="lazy">`
+    ).join('');
+  } else {
+    photosEl.style.display = 'none';
+  }
+
+  // Info Bling
+  const infoItems = [
+    // estoque removido conforme decisão operacional
+    p.weight      ? ['Peso líq.', `${p.weight}kg`, 'blue']  : null,
+    p.weightBruto ? ['Peso bruto', `${p.weightBruto}kg`, ''] : null,
+    dims.length   ? ['Dimensões', dims.join('×')+'cm', 'blue'] : null,
+    p.ean         ? ['EAN', p.ean, '']         : null,
+    p.eanBox      ? ['EAN cx', p.eanBox, '']   : null,
+    p.itensPorCaixa ? ['Itens/cx', p.itensPorCaixa, ''] : null,
+    p.preco       ? ['Preço', `R$${Number(p.preco).toFixed(2).replace('.',',')}`, ''] : null,
+  ].filter(Boolean);
+
+  document.getElementById('mInfo').innerHTML = infoItems
+    .map(([l,v,c]) => `<div class="info-box"><div class="info-lbl">${esc(l)}</div><div class="info-val ${c}">${esc(String(v))}</div></div>`)
+    .join('');
+
+  // Info Sistema
+  const bin = ov.customBinName || p.bin || '';
+  const hasSystem = bin || ov.notes;
+  const sysEl = document.getElementById('mSystem');
+  if (hasSystem) {
+    sysEl.style.display = 'block';
+    document.getElementById('mSystemInfo').innerHTML = [
+      bin   ? ['Local', bin, 'warn']    : null,
+      ov.notes ? ['Notas', ov.notes, ''] : null,
+    ].filter(Boolean)
+     .map(([l,v,c]) => `<div class="info-box"><div class="info-lbl">${esc(l)}</div><div class="info-val ${c}" style="font-family:'DM Sans',sans-serif;font-size:12px;">${esc(String(v))}</div></div>`)
+     .join('');
+  } else {
+    sysEl.style.display = 'none';
+  }
+
+  // Embalagens compatíveis
+  const embEl = document.getElementById('mEmb');
+  if (p.width && p.height) {
+    const compat = EMBS.filter(emb => {
+      const mg = 1.25;
+      if (emb.type === 'saco') {
+        const vals = [p.width||0, p.height||0, p.depth||0].sort((a,b)=>a-b);
+        return vals[1] <= (emb.width||0)*mg && vals[2] <= (emb.height||0)*mg;
+      }
+      return (p.width||0) <= (emb.width||0)*mg && (p.height||0) <= (emb.height||0)*mg && (p.depth||0) <= (emb.depth||0)*mg;
+    });
+    if (compat.length) {
+      embEl.style.display = 'flex';
+      document.getElementById('mEmbList').innerHTML = compat.map(emb => {
+        const sc2 = emb.stock <= emb.stockMin ? 'red' : emb.stock <= emb.stockMin*1.5 ? 'warn' : 'green';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:var(--r);font-size:12px;margin-bottom:5px;">
+          <span>${emb.type==='saco'?'🛍️':'📦'}</span>
+          <span style="flex:1;font-weight:700;">${esc(emb.name)}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--${sc2});">Estq: ${emb.stock}</span>
+        </div>`;
+      }).join('');
+    } else { embEl.style.display = 'none'; }
+  } else { embEl.style.display = 'none'; }
+
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+window.openModal  = openModal;
+window.closeModal = closeModal;
+
+// ── SKELETON ──
+function showSkeleton() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="prod-grid">${
+    Array(16).fill(0).map(()=>`
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;">
+        <div class="skel" style="width:100%;aspect-ratio:1;"></div>
+        <div style="padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
+          <div class="skel" style="height:9px;width:55%;border-radius:4px;"></div>
+          <div class="skel" style="height:12px;border-radius:4px;"></div>
+          <div class="skel" style="height:12px;width:75%;border-radius:4px;"></div>
+        </div>
+      </div>`).join('')
+  }</div>`;
+}
+
+// ── INIT ──
+boot();
+</script>
+</body>
+</html>

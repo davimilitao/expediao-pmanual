@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Produtos — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0d1117; --surface:#161c2d; --s2:#1e2640; --s3:#242e4c;
+      --line:rgba(255,255,255,0.07); --text:#e2e8f7; --muted:#7a85a0; --muted2:#4a5268;
+      --ml:#ffe600; --shop:#ff6633; --green:#00e676; --red:#ff4060;
+      --blue:#3d8bff; --warn:#ffb300; --purple:#a855f7;
+      --r:12px; --r2:18px; --sh:0 4px 24px rgba(0,0,0,.35);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow:hidden;}
+
+    /* TOPBAR */
+    .topbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:relative;z-index:20;flex-shrink:0;}
+    .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ml),var(--blue),var(--shop));}
+    .brand{font-family:'Space Mono',monospace;font-weight:700;font-size:15px;color:var(--ml);letter-spacing:1px;}
+    .brand span{color:var(--muted);font-weight:400;}
+    .topbar-right{display:flex;gap:8px;align-items:center;}
+    .tlink{color:var(--blue);text-decoration:none;font-weight:700;font-size:13px;}
+    .tlink:hover{text-decoration:underline;}
+
+    /* LAYOUT */
+    .layout{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 56px);overflow:hidden;}
+
+    /* SIDEBAR */
+    .sidebar{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+    .sidebar-head{padding:14px 14px 10px;border-bottom:1px solid var(--line);flex-shrink:0;}
+    .sidebar-head h2{font-size:14px;font-weight:900;margin-bottom:10px;}
+    .search-input{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:.15s;}
+    .search-input:focus{border-color:rgba(61,139,255,.45);box-shadow:0 0 0 3px rgba(61,139,255,.1);}
+    .search-input::placeholder{color:var(--muted2);}
+    .search-hint{font-size:11px;color:var(--muted2);margin-top:6px;}
+
+    .results-list{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;}
+    .results-list::-webkit-scrollbar{width:4px;}
+    .results-list::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px;}
+
+    .result-item{background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;cursor:pointer;transition:.15s;display:flex;gap:10px;align-items:center;}
+    .result-item:hover{background:var(--s3);}
+    .result-item.active{border-color:rgba(61,139,255,.45);background:var(--s3);box-shadow:0 0 0 1px rgba(61,139,255,.15);}
+    .ri-img{width:40px;height:40px;border-radius:8px;object-fit:cover;background:var(--s3);border:1px solid var(--line);flex-shrink:0;}
+    .ri-info{min-width:0;}
+    .ri-sku{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--blue);}
+    .ri-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+    .ri-status{display:flex;gap:4px;margin-top:4px;}
+    .dot-photo{width:6px;height:6px;border-radius:50%;background:var(--s3);flex-shrink:0;}
+    .dot-photo.has{background:var(--green);}
+
+    /* MAIN */
+    .main{overflow-y:auto;background:var(--bg);}
+    .main::-webkit-scrollbar{width:6px;}
+    .main::-webkit-scrollbar-thumb{background:var(--s2);border-radius:3px;}
+
+    /* NO SELECTION */
+    .no-sel{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--muted2);text-align:center;padding:40px;}
+    .no-sel-icon{font-size:52px;opacity:.2;}
+    .no-sel h3{font-size:18px;color:var(--muted);}
+    .no-sel p{font-size:13px;max-width:280px;line-height:1.6;}
+
+    /* PRODUCT PANEL */
+    .prod-panel{padding:20px;display:flex;flex-direction:column;gap:20px;}
+
+    /* PRODUCT HEADER */
+    .prod-hdr{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:18px 20px;}
+    .prod-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;}
+    .prod-name{font-size:20px;font-weight:900;line-height:1.3;}
+    .prod-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+    .ptag{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);background:var(--s2);border:1px solid var(--line);padding:3px 8px;border-radius:6px;}
+    .ptag-blue{color:var(--blue);border-color:rgba(61,139,255,.25);background:rgba(61,139,255,.08);}
+    .ptag-warn{color:var(--warn);border-color:rgba(255,179,0,.25);background:rgba(255,179,0,.08);}
+    .ptag-green{color:var(--green);border-color:rgba(0,230,118,.25);background:rgba(0,230,118,.08);}
+
+    /* INFO BLING (readonly) */
+    .bling-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+    .bling-field{display:flex;flex-direction:column;gap:3px;}
+    .bling-label{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;}
+    .bling-val{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text);}
+    .bling-val.empty{color:var(--muted2);font-weight:400;font-style:italic;font-family:'DM Sans',sans-serif;}
+    .bling-badge{font-size:10px;color:var(--muted2);margin-top:2px;}
+
+    /* SEÇÕES EDITÁVEIS */
+    .section{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;}
+    .sec-hdr{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+    .sec-hdr-title{font-size:14px;font-weight:900;display:flex;align-items:center;gap:8px;}
+    .sec-body{padding:16px 18px;}
+
+    /* BOTÕES */
+    .btn{padding:9px 16px;border-radius:var(--r);border:1px solid var(--line);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;transition:.15s;}
+    .btn:disabled{opacity:.35;cursor:not-allowed;}
+    .btn-primary{background:var(--blue);color:#fff;border-color:transparent;}
+    .btn-primary:not(:disabled):hover{filter:brightness(1.15);}
+    .btn-ghost{background:var(--s2);color:var(--muted);}
+    .btn-ghost:not(:disabled):hover{background:var(--s3);color:var(--text);}
+    .btn-danger{background:rgba(255,64,96,.15);color:var(--red);border-color:rgba(255,64,96,.3);}
+    .btn-danger:not(:disabled):hover{background:rgba(255,64,96,.25);}
+    .btn-sm{padding:6px 10px;font-size:12px;border-radius:8px;}
+
+    /* INPUTS */
+    input[type=text],input[type=number],textarea{background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;width:100%;transition:.15s;}
+    input:focus,textarea:focus{border-color:rgba(61,139,255,.45);box-shadow:0 0 0 3px rgba(61,139,255,.1);}
+    input::placeholder,textarea::placeholder{color:var(--muted2);}
+    textarea{resize:vertical;min-height:80px;}
+    .field{display:flex;flex-direction:column;gap:5px;}
+    .field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+    .input-row{display:flex;gap:8px;align-items:flex-end;}
+    .input-row input{flex:1;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+    /* FOTOS */
+    .photo-section{display:flex;flex-direction:column;gap:14px;}
+    .photo-group{display:flex;flex-direction:column;gap:8px;}
+    .photo-group-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:6px;}
+    .photo-strip{display:flex;gap:8px;flex-wrap:wrap;}
+
+    .photo-card{position:relative;width:110px;height:110px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--s2);flex-shrink:0;}
+    .photo-card img{width:100%;height:100%;object-fit:cover;display:block;}
+    .photo-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.75);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;padding:3px 6px;opacity:0;transition:.15s;}
+    .photo-card:hover .photo-del{opacity:1;}
+    .photo-del:hover{background:var(--red);}
+
+    .photo-add{width:110px;height:110px;border-radius:var(--r);border:1px dashed var(--line);background:var(--s2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:.15s;flex-shrink:0;}
+    .photo-add:hover{border-color:rgba(61,139,255,.45);background:rgba(61,139,255,.05);}
+    .photo-add-icon{font-size:22px;}
+    .photo-add-label{font-size:11px;color:var(--muted);font-weight:700;}
+    .photo-add input{display:none;}
+
+    .bin-photo-wrap{position:relative;width:180px;height:140px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--s2);}
+    .bin-photo-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+    .bin-photo-date{font-size:10px;color:var(--muted2);margin-top:4px;font-family:'Space Mono',monospace;}
+
+    /* EMBALAGEM SUGERIDA */
+    .emb-sugg{display:flex;flex-direction:column;gap:6px;}
+    .emb-sugg-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border:1px solid var(--line);border-radius:var(--r);}
+    .emb-sugg-name{font-weight:700;font-size:13px;flex:1;}
+    .emb-sugg-dims{font-family:'Space Mono',monospace;font-size:11px;color:var(--blue);}
+    .emb-sugg-stock{font-family:'Space Mono',monospace;font-size:11px;}
+    .emb-sugg-stock.ok{color:var(--green);}
+    .emb-sugg-stock.low{color:var(--red);}
+    .emb-sugg-stock.warn{color:var(--warn);}
+    .emb-empty{font-size:12px;color:var(--muted2);font-style:italic;padding:8px 0;}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--s2);border:1px solid var(--line);border-radius:var(--r2);padding:11px 20px;font-weight:700;font-size:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:100;transition:transform .25s,opacity .25s;opacity:0;white-space:nowrap;pointer-events:none;}
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+    .toast.ok{border-color:rgba(0,230,118,.4);color:var(--green);}
+    .toast.err{border-color:rgba(255,64,96,.4);color:var(--red);}
+    .toast.info{border-color:rgba(61,139,255,.4);color:var(--blue);}
+
+    @media(max-width:860px){.layout{grid-template-columns:1fr;}.sidebar{height:280px;}.main{overflow-y:auto;height:calc(100vh - 56px - 280px);}}
+
+    /* ── PADRÃO BLING (dados somente leitura) ── */
+    .bling-section {
+      background: rgba(61,139,255,.04);
+      border: 1px solid rgba(61,139,255,.12);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      position: relative;
+    }
+    .bling-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(61,139,255,.12);
+      border: 1px solid rgba(61,139,255,.2);
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: .3px;
+    }
+    .bling-badge::before { content: '⬡'; font-size: 10px; }
+    .bling-readonly-label {
+      font-size: 10px;
+      color: var(--muted2);
+      font-style: italic;
+      margin-top: 2px;
+    }
+    /* campo Bling: fundo levemente diferente para reforçar readonly */
+    .bling-field .bling-val {
+      background: rgba(61,139,255,.04);
+      border: 1px dashed rgba(61,139,255,.15);
+      border-radius: 6px;
+      padding: 4px 8px;
+      display: inline-block;
+    }
+
+    /* ── PADRÃO SISTEMA (dados operacionais) ── */
+    .system-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0,230,118,.1);
+      border: 1px solid rgba(0,230,118,.2);
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: .3px;
+    }
+    .system-badge::before { content: '●'; font-size: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">EXPEDICAO<span>/PRO</span></div>
+  <div class="topbar-right">
+    <a class="tlink" href="/">← Painel</a>
+    <a class="tlink" href="/pedidos">Pedidos</a>
+    <a class="tlink" href="/embalagens">Embalagens</a>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR BUSCA -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <h2>Admin Produtos</h2>
+      <input class="search-input" type="text" id="searchInput" placeholder="SKU, EAN ou nome…" autocomplete="off" />
+      <div class="search-hint" id="searchHint">Digite ao menos 3 letras</div>
+    </div>
+    <div class="results-list" id="resultsList">
+      <div style="padding:16px;text-align:center;font-size:13px;color:var(--muted2);">Busque um produto acima</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="mainPanel">
+    <div class="no-sel" id="noSel">
+      <div class="no-sel-icon">🖼️</div>
+      <h3>Selecione um produto</h3>
+      <p>Busque pelo SKU, EAN ou nome e selecione para editar fotos, localização e informações operacionais.</p>
+    </div>
+    <div id="prodPanel" style="display:none;"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const TERMINAL_KEY = 'expedicao_pro_terminal_id';
+function tid(){let id=localStorage.getItem(TERMINAL_KEY);if(!id){id=crypto.randomUUID();localStorage.setItem(TERMINAL_KEY,id);}return id;}
+
+async function api(path,opts={}){
+  const token=localStorage.getItem('expedicao_token')||'';
+  const res=await fetch(path,{...opts,headers:{'content-type':'application/json','x-terminal-id':tid(),'authorization':`Bearer ${token}`,...(opts.headers||{})}});
+  const d=await res.json().catch(()=>({}));
+  if(res.status===401){window.location.href='/login';return null;}
+  if(!res.ok)throw new Error(d.error||`HTTP ${res.status}`);
+  return d;
+}
+
+function esc(s){return(s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);}
+
+let _tt=null;
+function toast(msg,type='info'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=`toast show ${type}`;
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+// ── STATE ──
+let currentSku = null;
+let currentProduct = null;
+let searchTimer = null;
+let embalagens = [];
+
+// ── LOAD EMBALAGENS para sugestão ──
+async function loadEmbalagens(){
+  try {
+    const d = await api('/embalagens/list');
+    if (d) embalagens = d.items || [];
+  } catch {}
+}
+
+// ── SEARCH ──
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 3) {
+    document.getElementById('searchHint').textContent = 'Digite ao menos 3 letras';
+    return;
+  }
+  document.getElementById('searchHint').textContent = 'Buscando…';
+  searchTimer = setTimeout(() => doSearch(q), 250);
+});
+
+async function doSearch(q) {
+  try {
+    const d = await api(`/admin/products/search?q=${encodeURIComponent(q)}`);
+    if (!d) return;
+    renderResults(d.items || []);
+  } catch(e) {
+    document.getElementById('searchHint').textContent = `Erro: ${e.message}`;
+  }
+}
+
+function renderResults(items) {
+  const list = document.getElementById('resultsList');
+  const hint = document.getElementById('searchHint');
+  hint.textContent = `${items.length} resultado(s)`;
+  list.innerHTML = '';
+
+  if (!items.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;font-size:13px;color:var(--muted2);">Nenhum resultado</div>';
+    return;
+  }
+
+  for (const p of items) {
+    const hasStock = (p.override?.stockPhotos?.length > 0);
+    const hasBin   = !!p.override?.binPhoto;
+    const imgSrc   = p.displayImage || '/assets/placeholder.png';
+
+    const div = document.createElement('div');
+    div.className = `result-item${p.sku === currentSku ? ' active' : ''}`;
+    div.innerHTML = `
+      <img class="ri-img" src="${esc(imgSrc)}" onerror="this.src='/assets/placeholder.png'" alt="">
+      <div class="ri-info">
+        <div class="ri-sku">${esc(p.sku||'')}</div>
+        <div class="ri-name">${esc(p.name||'')}</div>
+        <div class="ri-status">
+          <span class="dot-photo ${hasStock?'has':''}" title="Foto produto"></span>
+          <span class="dot-photo ${hasBin?'has':''}" title="Foto prateleira"></span>
+          <span style="font-size:10px;color:var(--muted2);margin-left:4px;">${hasStock?'📷':''} ${hasBin?'📍':''}</span>
+        </div>
+      </div>
+    `;
+    div.addEventListener('click', () => selectProduct(p.sku));
+    list.appendChild(div);
+  }
+}
+
+// ── SELECT PRODUCT ──
+async function selectProduct(sku) {
+  currentSku = sku;
+  document.querySelectorAll('.result-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.result-item`)?.classList.add('active');
+
+  try {
+    const d = await api(`/admin/products/${encodeURIComponent(sku)}`);
+    if (!d) return;
+    currentProduct = d.item;
+    renderPanel(d.item);
+  } catch(e) { toast(`Erro: ${e.message}`, 'err'); }
+}
+
+// ── RENDER PANEL ──
+function renderPanel(p) {
+  document.getElementById('noSel').style.display = 'none';
+  const panel = document.getElementById('prodPanel');
+  panel.style.display = 'block';
+
+  const ov = p.override || {};
+  const customBin = ov.customBinName || p.bin || '';
+  const notes     = ov.notes || '';
+  const stockPhotos = Array.isArray(ov.stockPhotos) ? ov.stockPhotos : [];
+  const boxPhotos   = Array.isArray(ov.boxPhotos)   ? ov.boxPhotos   : [];
+  const binPhoto    = ov.binPhoto || null;
+  const binDate     = ov.updatedAtMs ? new Date(ov.updatedAtMs).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : null;
+
+  // Dimensões do produto (Bling)
+  const w  = p.width  || p.largura       || null;
+  const h  = p.height || p.altura        || null;
+  const d2 = p.depth  || p.profundidade  || null;
+  const wt = p.weight || p.pesoLiquido   || p['peso_liquido'] || null;
+  const wb = p.weightBruto || p.pesoBruto || null;
+  const loc = p.bin   || p.localizacao   || null;
+  const stock = p.estoque ?? p.stock ?? null;
+
+  // Embalagens sugeridas para este produto
+  const embSugg = embalagens.filter(emb => {
+    if (!w || !h) return false;
+    const pw = parseFloat(w) || 0;
+    const ph = parseFloat(h) || 0;
+    const pd = parseFloat(d2) || 0;
+    const marg = 1.25;
+    if (emb.type === 'saco') {
+      const maxP = Math.max(pw,ph,pd);
+      const midP = [pw,ph,pd].sort((a,b)=>a-b)[1];
+      return midP <= (emb.width||0)*marg && maxP <= (emb.height||0)*marg;
+    } else {
+      return pw <= (emb.width||0)*marg && ph <= (emb.height||0)*marg && pd <= (emb.depth||0)*marg;
+    }
+  }).slice(0,5);
+
+  // ── RENDER ──
+  panel.innerHTML = `
+  <div class="prod-panel">
+
+    <!-- HEADER PRODUTO -->
+    <div class="prod-hdr">
+      <div class="prod-hdr-top">
+        <div>
+          <div class="prod-name">${esc(p.name||'')}</div>
+          <div class="prod-tags" style="margin-top:8px;">
+            <span class="ptag ptag-blue">SKU: ${esc(p.sku||'')}</span>
+            ${p.ean ? `<span class="ptag">EAN: ${esc(p.ean)}</span>` : ''}
+            ${p.eanBox ? `<span class="ptag">EAN cx: ${esc(p.eanBox)}</span>` : ''}
+            ${customBin ? `<span class="ptag ptag-warn">📍 ${esc(customBin)}</span>` : ''}
+            ${stock !== null ? `<span class="ptag" style="background:rgba(61,139,255,.08);color:var(--blue);border-color:rgba(61,139,255,.2);" title="Dado do Bling — somente leitura">⬡ Estoque Bling: ${stock}</span>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- DADOS BLING (readonly) -->
+      <div class="bling-section" style="margin-top:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span class="bling-badge">Dados do Bling</span>
+          <span class="bling-readonly-label">somente leitura — atualize pelo Bling ou reimporte o CSV</span>
+        </div>
+        <div class="bling-grid">
+          ${blingField('Peso líq.', wt  ? `${wt} kg` : null)}
+          ${blingField('Peso bruto', wb ? `${wb} kg` : null)}
+          ${blingField('Largura', w  ? `${w} cm` : null)}
+          ${blingField('Altura', h   ? `${h} cm` : null)}
+          ${blingField('Profund.', d2 ? `${d2} cm` : null)}
+          ${blingField('Localização', loc)}
+          ${blingField('Estoque', stock !== null ? String(stock) : null)}
+          ${blingField('Itens/caixa', p.itensPorCaixa ? String(p.itensPorCaixa) : null)}
+        </div>
+      </div>
+    </div>
+
+    <!-- LOCALIZAÇÃO -->
+    <div class="section">
+      <div class="sec-hdr">
+        <div class="sec-hdr-title">📍 Localização no Estoque <span class="system-badge" style="margin-left:8px;font-size:10px;">Sistema</span></div>
+      </div>
+      <div class="sec-body" style="display:flex;flex-direction:column;gap:14px;">
+        <div class="field">
+          <label>Nome do local (prateleira, rua, caixa…)</label>
+          <div class="input-row">
+            <input type="text" id="inputBin" value="${esc(customBin)}" placeholder="Ex: Rua A — Prateleira 2 — Caixa 3" />
+            <button class="btn btn-primary btn-sm" onclick="saveBin()">Salvar</button>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Foto da Prateleira</div>
+          <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+            ${binPhoto
+              ? `<div>
+                  <div class="bin-photo-wrap">
+                    <img src="${esc(binPhoto)}" onerror="this.src='/assets/placeholder.png'" alt="">
+                    <button class="photo-del" style="opacity:1;position:absolute;top:4px;right:4px;" onclick="deletePhoto('bin',null)">✕</button>
+                  </div>
+                  ${binDate ? `<div class="bin-photo-date">📅 ${esc(binDate)}</div>` : ''}
+                </div>`
+              : `<div style="font-size:12px;color:var(--muted2);align-self:center;">Sem foto de localização</div>`
+            }
+            <label class="photo-add" style="width:110px;height:${binPhoto?'80':'110'}px;">
+              <input type="file" accept="image/*" onchange="uploadPhoto('bin',this)" />
+              <span class="photo-add-icon">📸</span>
+              <span class="photo-add-label">${binPhoto?'Atualizar':'Tirar foto'}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOTOS DO PRODUTO -->
+    <div class="section">
+      <div class="sec-hdr">
+        <div class="sec-hdr-title">📦 Fotos do Produto <span class="system-badge" style="margin-left:8px;font-size:10px;">Sistema</span></div>
+        <span style="font-size:11px;color:var(--muted);">${stockPhotos.length}/10 fotos</span>
+      </div>
+      <div class="sec-body photo-section">
+
+        <div class="photo-group">
+          <div class="photo-group-label">📦 Produto (sem embalagem)</div>
+          <div class="photo-strip" id="stripStock">
+            ${stockPhotos.map((url,i) => photoCard(url,'stock',i)).join('')}
+            ${stockPhotos.length < 10 ? photoAddBtn('stock') : ''}
+          </div>
+        </div>
+
+        <div class="photo-group">
+          <div class="photo-group-label">🎁 Produto embalado (pronto para envio)</div>
+          <div class="photo-strip" id="stripBox">
+            ${boxPhotos.map((url,i) => photoCard(url,'box',i)).join('')}
+            ${boxPhotos.length < 10 ? photoAddBtn('box') : ''}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- NOTAS INTERNAS -->
+    <div class="section">
+      <div class="sec-hdr">
+        <div class="sec-hdr-title">📝 Notas Operacionais <span class="system-badge" style="margin-left:8px;font-size:10px;">Sistema</span></div>
+      </div>
+      <div class="sec-body" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="field">
+          <label>Notas para o separador (aparece no pedido)</label>
+          <textarea id="inputNotes" placeholder="Ex: Produto frágil — embalar com bolha. Não empilhar.">${esc(notes)}</textarea>
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="saveNotes()">Salvar notas</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMBALAGENS SUGERIDAS -->
+    <div class="section">
+      <div class="sec-hdr">
+        <div class="sec-hdr-title">🎁 Embalagens Compatíveis</div>
+        <a href="/embalagens" style="font-size:12px;color:var(--blue);text-decoration:none;font-weight:700;">Gerenciar →</a>
+      </div>
+      <div class="sec-body">
+        ${w && h
+          ? (embSugg.length
+            ? `<div class="emb-sugg">
+                ${embSugg.map(emb => {
+                  const sc = emb.stock <= emb.stockMin ? 'low' : emb.stock <= emb.stockMin*1.5 ? 'warn' : 'ok';
+                  const typeLabel = {saco:'Saco',caixa:'Caixa',envelope:'Envelope',outro:'Outro'}[emb.type]||emb.type;
+                  const dims = [emb.width,emb.height,emb.depth].filter(Boolean).join('×');
+                  return `<div class="emb-sugg-item">
+                    <span style="font-size:18px;">${emb.type==='saco'?'🛍️':'📦'}</span>
+                    <div style="flex:1;min-width:0;">
+                      <div class="emb-sugg-name">${esc(emb.name)}</div>
+                      <div style="font-size:11px;color:var(--muted);">${typeLabel} · ${dims}${emb.unit||'cm'}</div>
+                    </div>
+                    <span class="emb-sugg-dims">${dims}${emb.unit||'cm'}</span>
+                    <span class="emb-sugg-stock ${sc}">Estq: ${emb.stock}</span>
+                  </div>`;
+                }).join('')}
+              </div>`
+            : `<div class="emb-empty">Nenhuma embalagem cadastrada se encaixa nas dimensões deste produto (${w}×${h}×${d2||'?'} cm).<br>Acesse <a href="/embalagens" style="color:var(--blue)">Embalagens</a> para cadastrar.</div>`
+          )
+          : `<div class="emb-empty">Produto sem dimensões cadastradas no Bling. Não é possível sugerir embalagens automaticamente.</div>`
+        }
+      </div>
+    </div>
+
+  </div>
+  `;
+
+  // bind upload inputs
+  panel.querySelectorAll('.photo-add-input').forEach(input => {
+    input.addEventListener('change', function() {
+      uploadPhoto(this.dataset.kind, this);
+    });
+  });
+}
+
+function blingField(label, val) {
+  return `<div class="bling-field">
+    <div class="bling-label">${esc(label)}</div>
+    <div class="bling-val ${val?'':'empty'}">${val ? esc(val) : '—'}</div>
+    ${val ? '' : '<div class="bling-badge">não informado</div>'}
+  </div>`;
+}
+
+function photoCard(url, kind, idx) {
+  return `<div class="photo-card">
+    <img src="${esc(url)}" onerror="this.src='/assets/placeholder.png'" alt="">
+    <button class="photo-del" onclick="deletePhoto('${esc(kind)}',${idx})">✕</button>
+  </div>`;
+}
+
+function photoAddBtn(kind) {
+  return `<label class="photo-add">
+    <input type="file" accept="image/*" class="photo-add-input" data-kind="${esc(kind)}" />
+    <span class="photo-add-icon">📷</span>
+    <span class="photo-add-label">Adicionar</span>
+  </label>`;
+}
+
+// ── SAVE BIN ──
+async function saveBin() {
+  if (!currentSku) return;
+  const customBinName = document.getElementById('inputBin').value;
+  try {
+    await api(`/admin/products/${encodeURIComponent(currentSku)}`, {
+      method:'PATCH', body:JSON.stringify({customBinName})
+    });
+    toast('Localização salva ✓', 'ok');
+    await reloadProduct();
+  } catch(e) { toast(`Erro: ${e.message}`, 'err'); }
+}
+
+// ── SAVE NOTES ──
+async function saveNotes() {
+  if (!currentSku) return;
+  const notes = document.getElementById('inputNotes').value;
+  try {
+    await api(`/admin/products/${encodeURIComponent(currentSku)}`, {
+      method:'PATCH', body:JSON.stringify({notes})
+    });
+    toast('Notas salvas ✓', 'ok');
+  } catch(e) { toast(`Erro: ${e.message}`, 'err'); }
+}
+
+// ── UPLOAD PHOTO ──
+async function uploadPhoto(kind, input) {
+  if (!currentSku || !input.files?.length) return;
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+  formData.append('kind', kind);
+  toast('Enviando foto…', 'info');
+  try {
+    const res = await fetch(`/admin/products/${encodeURIComponent(currentSku)}/upload`, {
+      method:'POST',
+      headers:{ 'authorization':`Bearer ${localStorage.getItem('expedicao_token')||''}` },
+      body: formData
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    toast('Foto salva ✓', 'ok');
+    input.value = '';
+    await reloadProduct();
+  } catch(e) { toast(`Erro no upload: ${e.message}`, 'err'); }
+}
+
+// ── DELETE PHOTO ──
+async function deletePhoto(kind, idx) {
+  if (!currentSku || !currentProduct) return;
+  if (!confirm('Remover esta foto?')) return;
+  const ov = currentProduct.override || {};
+  let patch = {};
+
+  if (kind === 'bin') {
+    patch.binPhoto = '';
+  } else if (kind === 'stock') {
+    const arr = [...(ov.stockPhotos||[])];
+    arr.splice(idx, 1);
+    patch.stockPhotos = arr;
+  } else if (kind === 'box') {
+    const arr = [...(ov.boxPhotos||[])];
+    arr.splice(idx, 1);
+    patch.boxPhotos = arr;
+  }
+
+  try {
+    await api(`/admin/products/${encodeURIComponent(currentSku)}`, {
+      method:'PATCH', body:JSON.stringify(patch)
+    });
+    toast('Foto removida', 'info');
+    await reloadProduct();
+  } catch(e) { toast(`Erro: ${e.message}`, 'err'); }
+}
+
+// ── RELOAD ──
+async function reloadProduct() {
+  if (!currentSku) return;
+  try {
+    const d = await api(`/admin/products/${encodeURIComponent(currentSku)}`);
+    if (!d) return;
+    currentProduct = d.item;
+    renderPanel(d.item);
+    // atualiza item na lista de resultados
+    document.querySelectorAll('.result-item').forEach(el => {
+      el.classList.toggle('active', false);
+    });
+  } catch(e) {}
+}
+
+// Expor para HTML
+window.saveBin      = saveBin;
+window.saveNotes    = saveNotes;
+window.uploadPhoto  = uploadPhoto;
+window.deletePhoto  = deletePhoto;
+
+// INIT
+loadEmbalagens();
+</script>
+</body>
+</html>
