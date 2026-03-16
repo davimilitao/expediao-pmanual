@@ -75,7 +75,7 @@ app.use(morgan('tiny'));
 setupAuthRoutes(app, db);
 
 // ---------------- Static (public) ----------------
-const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+const PUBLIC_DIR = path.join(__dirname, 'public');
 app.use(express.static(PUBLIC_DIR));
 app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 app.get('/manual', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'manual.html')));
