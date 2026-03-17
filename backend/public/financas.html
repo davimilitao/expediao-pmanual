@@ -1,61 +1,116 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Finanças — Universo Compra Certa</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/style.css" />
+  <meta charset="UTF-8">
+  <title>Finanças — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .fin-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    
+    /* Painel de Inserção Rápida */
+    .fast-add-panel { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid var(--border); height: fit-content; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; }
+    .form-input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text-primary); }
+    .btn-add { width: 100%; padding: 12px; background: var(--accent); color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+    
+    /* Dashboard e Tabela */
+    .dashboard-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .dash-card { background: var(--surface); padding: 16px; border-radius: 12px; border: 1px solid var(--border); }
+    .dash-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: bold; }
+    .dash-value { font-size: 24px; font-weight: 900; margin-top: 5px; }
+    .val-pendente { color: var(--warning); }
+    .val-pago { color: var(--success); }
+
+    .expenses-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; }
+    .expenses-table th, .expenses-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .tag-status { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+    .tag-pago { background: rgba(35, 134, 54, 0.2); color: var(--success); }
+    .tag-pendente { background: rgba(210, 153, 34, 0.2); color: var(--warning); }
+
+    @media(max-width: 800px) { .fin-layout { grid-template-columns: 1fr; } .dashboard-cards { grid-template-columns: 1fr; } }
+  </style>
 </head>
-<body>
-  <div class="topbar">
-    <div class="topbar__left">
-      <div class="brand">Universo Compra Certa</div>
-      <div class="subtitle">Gestão de Despesas & Embalagens</div>
-    </div>
-    <div class="topbar__right">
-        <a class="link small" href="/index.html">← Voltar ao Painel</a>
-    </div>
+<body class="dark-theme">
+
+<div class="topbar">
+  <div class="brand">EXPEDICAO<span>/FINANÇAS</span></div>
+  <a href="/" style="color: var(--accent); text-decoration: none; font-weight: bold; font-size: 13px;">← Voltar ao Painel</a>
+</div>
+
+<div class="fin-layout">
+  <div class="fast-add-panel">
+    <h3 style="margin-bottom: 15px;">Nova Despesa Rápida</h3>
+    <form id="formDespesa" onsubmit="adicionarDespesa(event)">
+      <div class="form-group">
+        <label>Data</label>
+        <input type="text" id="add-data" class="form-input" placeholder="DD/MM/AAAA" required>
+      </div>
+      <div class="form-group">
+        <label>Nome / Descrição (Ex: Fita Crepe)</label>
+        <input type="text" id="add-nome" class="form-input" required>
+      </div>
+      <div class="form-group">
+        <label>Valor (R$)</label>
+        <input type="text" id="add-valor" class="form-input" placeholder="10,50" required>
+      </div>
+      <div class="form-group">
+        <label>Local / Fornecedor</label>
+        <input type="text" id="add-local" class="form-input" placeholder="Mercado Livre">
+      </div>
+      <div class="form-group">
+        <label>Situação</label>
+        <select id="add-situacao" class="form-input">
+          <option value="Pago">Pago</option>
+          <option value="Pendente">Pendente</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-add" id="btnSalvar">Salvar na Planilha</button>
+    </form>
   </div>
 
-  <div class="container">
-    <div class="card">
-      <h2>Novo Lançamento</h2>
-      <form id="expenseForm" class="grid2">
-        <div class="field">
-          <span>Descrição</span>
-          <input type="text" id="desc" placeholder="Ex: J3 Transportadora" required />
-        </div>
-        <div class="field">
-          <span>Valor (R$)</span>
-          <input type="number" step="0.01" id="valor" placeholder="0,00" required />
-        </div>
-        <div class="field">
-          <span>Data</span>
-          <input type="date" id="data" required />
-        </div>
-        <div class="field">
-          <span>Status</span>
-          <select id="status">
-            <option value="Pendente">Pendente</option>
-            <option value="Pago">Pago</option>
-          </select>
-        </div>
-        <button type="submit" class="btn btn--primary">Lançar Despesa</button>
-      </form>
+  <div>
+    <div class="dashboard-cards">
+      <div class="dash-card">
+        <div class="dash-label">Total do Mês</div>
+        <div class="dash-value" id="dash-total">R$ 0,00</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-label">Pago</div>
+        <div class="dash-value val-pago" id="dash-pago">R$ 0,00</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-label">Pendente (A Pagar)</div>
+        <div class="dash-value val-pendente" id="dash-pendente">R$ 0,00</div>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="row row--space">
-        <h2>Histórico de Despesas</h2>
-        <button class="btn btn--ghost" onclick="syncSheets()">Sincronizar Google Sheets</button>
-      </div>
-      <div id="expenseList" class="list">
-        <div class="muted">Carregando despesas...</div>
-      </div>
-    </div>
+    <table class="expenses-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Descrição</th>
+          <th>Local</th>
+          <th>Valor</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="listaDespesas">
+        <tr><td colspan="5" style="text-align:center;">Carregando despesas...</td></tr>
+      </tbody>
+    </table>
   </div>
+</div>
 
-  <div id="toast" class="toast hidden"></div>
-  <script src="/financas.js"></script>
+<div class="toast" id="toast"></div>
+
+<script src="/financas.js"></script>
+<script>
+  // Autopreencher data de hoje
+  const hoje = new Date();
+  document.getElementById('add-data').value = hoje.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
+</script>
 </body>
 </html>

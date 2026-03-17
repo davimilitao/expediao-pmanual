@@ -16,6 +16,8 @@ const multer = require('multer');
 
 const admin = require('firebase-admin');
 
+const { google } = require('googleapis');
+
 function safeTrim(v) {
   return (v ?? '').toString().trim();
 }
@@ -85,6 +87,7 @@ app.get('/login', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')
 app.get('/embalagens', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'embalagens.html')));
 app.get('/importar', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'importar.html')));
 app.get('/catalogo', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'catalogo.html')));
+app.get('/compras', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'compras.html')));
 
 // ✅ uploads locais (fotos reais do estoque)
 const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads');
@@ -491,60 +494,66 @@ app.post('/orders/:id/status', async (req, res, next) => {
   }
 });
 
+// --- ROTA DE CONFERÊNCIA ATÓMICA ---
 app.post('/orders/:id/check', async (req, res, next) => {
   try {
     const terminalId = getTerminalId(req);
     const orderId = safeTrim(req.params.id);
-    const codeRaw = safeTrim(req.body.code);
-    if (!orderId) return res.status(400).json({ error: 'missing order id' });
-    if (!codeRaw) return res.status(400).json({ error: 'missing code' });
+    const code = safeTrim(req.body.code);
 
-    const code = codeRaw;
+    if (!orderId || !code) return res.status(400).json({ error: 'missing_params' });
+
     const orderRef = db.collection('orders').doc(orderId);
     const ts = nowMs();
 
     const out = await db.runTransaction(async (tx) => {
       const snap = await tx.get(orderRef);
-      if (!snap.exists) {
-        const e = new Error('order not found');
-        e.statusCode = 404;
-        throw e;
-      }
+      if (!snap.exists) throw new Error('order_not_found');
 
       const d = snap.data();
-      const lockActive = isLockActive(d);
-
-      if (lockActive && d.lockedBy !== terminalId) {
-        return { ok: false, error: 'locked_by_other_terminal', lockedBy: d.lockedBy, lockedAt: d.lockedAt };
+      if (isLockActive(d) && d.lockedBy !== terminalId) {
+        return { ok: false, error: 'locked_by_other_terminal' };
       }
-
-      tx.set(orderRef, { lockedBy: terminalId, lockedAt: ts }, { merge: true });
 
       const items = Array.isArray(d.items) ? d.items : [];
-      const idx = items.findIndex((it) => safeTrim(it.sku) === code || safeTrim(it.ean) === code || safeTrim(it.eanBox) === code);
+      // Procura o item por SKU, EAN ou EAN da Embalagem
+      const idx = items.findIndex(it => 
+        safeTrim(it.sku) === code || safeTrim(it.ean) === code || safeTrim(it.eanBox) === code
+      );
 
-      if (idx < 0) return { ok: false, found: false, error: 'item_not_found' };
+      if (idx < 0) return { ok: false, error: 'item_not_found' };
 
-      const it = { ...items[idx] };
-      const qty = Number(it.qty || 0);
-      const checked = Number(it.checkedQty || 0);
-
-      if (checked >= qty) {
-        return { ok: false, found: true, error: 'already_fully_checked', sku: it.sku, checkedQty: checked, qty };
+      const item = items[idx];
+      if (Number(item.checkedQty || 0) >= Number(item.qty || 0)) {
+        return { ok: false, error: 'already_fully_checked', sku: item.sku };
       }
 
-      it.checkedQty = checked + 1;
-      items[idx] = it;
+      // ATUALIZAÇÃO ATÓMICA: Incrementamos o valor e salvamos o array atualizado
+      item.checkedQty = admin.firestore.FieldValue.increment(1);
+      
+      // No Firestore, para incrementar dentro de um array num objeto, 
+      // precisamos atualizar o array inteiro no documento.
+      const newItems = [...items];
+      newItems[idx].checkedQty = (items[idx].checkedQty || 0) + 1;
 
-      tx.set(orderRef, { items, updatedAtMs: ts }, { merge: true });
+      tx.update(orderRef, { 
+        items: newItems, 
+        lockedBy: terminalId, 
+        lockedAt: ts, 
+        updatedAtMs: ts 
+      });
 
-      const allChecked = items.every((x) => Number(x.checkedQty || 0) >= Number(x.qty || 0));
-      return { ok: true, found: true, sku: it.sku, checkedQty: it.checkedQty, qty, allChecked };
+      return { 
+        ok: true, 
+        sku: item.sku, 
+        checkedQty: newItems[idx].checkedQty, 
+        qty: item.qty 
+      };
     });
 
     res.json(out);
   } catch (err) {
-    console.error('[/orders/:id/check] error:', err);
+    console.error('[CHECK ERROR]', err);
     next(err);
   }
 });
@@ -1005,7 +1014,128 @@ app.get('/products/all', async (req, res, next) => {
     next(err);
   }
 });
+// ================================================================
+// ROTA DE PEDIDOS DE COMPRA (REPOSIÇÃO)
+// ================================================================
+app.post('/api/compras', async (req, res, next) => {
+  try {
+    const { items, notas } = req.body;
+    if (!items || !items.length) return res.status(400).json({ error: 'Lista vazia' });
 
+    const ts = Date.now();
+    const day = yyyymmdd(new Date(ts));
+    const compraId = `COMP_${day}_${uuidv4().slice(0, 6).toUpperCase()}`;
+
+    // 1. Salva o pedido de compra
+    await db.collection('purchase_orders').doc(compraId).set({
+      id: compraId,
+      items,
+      notas: notas || '',
+      status: 'pending',
+      createdAtMs: ts
+    });
+
+    // 2. Lógica de Alerta de Embalagens
+    // Busca todas as embalagens para cruzar com os SKUs da lista de compras
+    const embSnap = await db.collection('embalagens').get();
+    const embalagens = embSnap.docs.map(d => d.data());
+    
+    const alertas = new Set();
+    
+    items.forEach(item => {
+      // Procura se alguma embalagem tem esse SKU na sua lista
+      const embRelacionada = embalagens.find(e => (e.skus || []).includes(item.sku));
+      if (embRelacionada) {
+        alertas.add(`⚠️ O SKU ${item.sku} usa a embalagem "${embRelacionada.name}". Verifique o estoque!`);
+      }
+    });
+
+    res.json({ 
+      ok: true, 
+      compraId, 
+      alertasEmbalagem: Array.from(alertas) 
+    });
+  } catch (err) {
+    console.error('[/api/compras] erro:', err);
+    next(err);
+  }
+});
+
+// ================================================================
+// ROTA DE FINANÇAS (INTEGRAÇÃO GOOGLE SHEETS)
+// ================================================================
+
+// Aproveitamos a mesma credencial que você já configurou para o Firebase!
+const sheetsAuth = new google.auth.GoogleAuth({
+  credentials: {
+    client_email: serviceAccount.client_email,
+    private_key: serviceAccount.private_key,
+  },
+  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+});
+const sheets = google.sheets({ version: 'v4', auth: sheetsAuth });
+
+// Pegue o ID da planilha do seu .env (é aquele código gigante na URL do Google Sheets)
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID; 
+const SHEET_NAME = 'Despesas'; // Nome exato da aba na sua planilha
+
+// 1. LER DESPESAS
+app.get('/api/despesas', async (req, res, next) => {
+  try {
+    if (!SPREADSHEET_ID) return res.status(500).json({ error: 'SPREADSHEET_ID não configurado no .env' });
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A:E`, // Colunas: A(Data), B(Nome), C(Valor), D(Local), E(Situação)
+    });
+
+    const rows = response.data.values || [];
+    if (rows.length === 0) return res.json({ items: [] });
+
+    // Ignora a linha 1 (Cabeçalho) e mapeia os dados
+    const data = rows.slice(1).map((r, index) => ({
+      id: index, // Usamos o índice da linha como ID temporário
+      data: r[0] || '',
+      nome: r[1] || '',
+      valor: parseFloat((r[2] || '0').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0,
+      local: r[3] || '',
+      situacao: (r[4] || '').toLowerCase().trim()
+    }));
+
+    // Ordena da mais recente para a mais antiga (assumindo formato DD/MM/YYYY)
+    data.sort((a, b) => {
+      const [d1, m1, y1] = a.data.split('/');
+      const [d2, m2, y2] = b.data.split('/');
+      return new Date(`${y2}-${m2}-${d2}`) - new Date(`${y1}-${m1}-${d1}`);
+    });
+
+    res.json({ items: data });
+  } catch (err) {
+    console.error('[/api/despesas GET]', err);
+    next(err);
+  }
+});
+
+// 2. ADICIONAR NOVA DESPESA RAPIDAMENTE
+app.post('/api/despesas', async (req, res, next) => {
+  try {
+    const { data, nome, valor, local, situacao } = req.body;
+    
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A:E`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[ data, nome, valor, local, situacao ]]
+      }
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[/api/despesas POST]', err);
+    next(err);
+  }
+});
 // ---------------- Errors ----------------
 app.use((err, req, res, next) => {
   const status = err.statusCode || 500;

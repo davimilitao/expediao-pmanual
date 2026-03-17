@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Reposição / Compras — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    /* Estilos específicos para a tela de compras */
+    .compras-container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; height: calc(100vh - 56px); }
+    .search-panel { background: var(--surface); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .cart-panel { padding: 20px; overflow-y: auto; }
+    
+    .search-input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-primary); }
+    .search-result-item { display: flex; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; margin-bottom: 8px; transition: 0.2s; }
+    .search-result-item:hover { border-color: var(--accent); }
+    .search-result-img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
+    
+    .cart-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--surface); border-radius: 12px; overflow: hidden; }
+    .cart-table th, .cart-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+    .cart-table th { background: var(--bg); font-size: 12px; text-transform: uppercase; color: var(--text-secondary); }
+    .cart-input { width: 80px; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text-primary); }
+    .cart-select { padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text-primary); }
+    .btn-remove { color: #ff4720; background: none; border: none; cursor: pointer; font-weight: bold; }
+
+    .action-bar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-fechar { background: var(--success); color: #fff; padding: 12px 24px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+
+    /* Estilo exclusivo para o PDF (invisível na tela) */
+    #pdf-template { display: none; padding: 40px; font-family: sans-serif; color: #000; background: #fff; }
+    .pdf-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+    .pdf-table { width: 100%; border-collapse: collapse; }
+    .pdf-table th, .pdf-table td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+    .pdf-thumb { width: 50px; height: 50px; object-fit: cover; }
+    
+    @media(max-width: 800px) { .compras-container { grid-template-columns: 1fr; } }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="dark-theme">
+
+<div class="topbar">
+  <div class="brand">EXPEDICAO<span>/COMPRAS</span></div>
+  <a href="/" style="color: var(--accent); text-decoration: none; font-weight: bold; font-size: 13px;">← Voltar ao Painel</a>
+</div>
+
+<div class="compras-container">
+  <div class="search-panel">
+    <h3>Buscar Produto</h3>
+    <input type="text" id="searchInput" class="search-input" placeholder="Digite nome, SKU ou EAN..." onkeyup="buscarProduto()">
+    <div id="searchResults" style="margin-top: 10px; overflow-y: auto; flex: 1;"></div>
+  </div>
+
+  <div class="cart-panel">
+    <h2>Lista de Reposição</h2>
+    <p style="color: var(--text-secondary); font-size: 13px;">Adicione itens, defina a modalidade e gere o PDF para o seu sócio.</p>
+    
+    <table class="cart-table">
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Marca / EAN</th>
+          <th>Qtd. Proposta</th>
+          <th>Modalidade</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody id="cartBody">
+        <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Nenhum item adicionado</td></tr>
+      </tbody>
+    </table>
+
+    <div class="action-bar">
+      <button class="btn-fechar" id="btnFechar" onclick="fecharLista()">✅ Fechar Lista & Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdf-template">
+  <div class="pdf-header">
+    <h2>PEDIDO DE COMPRA / REPOSIÇÃO</h2>
+    <p id="pdf-date"></p>
+  </div>
+  <table class="pdf-table">
+    <thead>
+      <tr>
+        <th>Foto</th>
+        <th>Produto / SKU</th>
+        <th>Marca</th>
+        <th>EAN / GTIN</th>
+        <th>Modalidade</th>
+        <th>Quantidade</th>
+      </tr>
+    </thead>
+    <tbody id="pdf-body"></tbody>
+  </table>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/compras.js"></script>
+</body>
+</html>

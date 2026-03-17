@@ -398,3 +398,67 @@ input:focus, select:focus, textarea:focus{
 .card--soft{ background:#f8fafc; border:1px solid rgba(2,6,23,.08); box-shadow:none; }
 .input{ padding:10px 12px; border-radius:12px; border:1px solid rgba(2,6,23,.12); outline:none; min-width: 260px; }
 .input:focus{ box-shadow: 0 0 0 3px rgba(52,131,250,.18); border-color: rgba(52,131,250,.45); }
+
+
+/* O Flash ocupa a tela toda com opacidade baixa para não cegar, mas ser visível */
+.scan-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+}
+
+.ok-flash { background: rgba(0, 230, 118, 0.25); } /* Verde vivo */
+.err-flash { background: rgba(255, 64, 96, 0.3); }  /* Vermelho vivo */
+
+/* Ajuste de fonte para facilitar a leitura dela */
+.qty-num {
+  font-size: 42px !important; /* Número bem grande */
+  font-weight: 900;
+}
+
+:root {
+  /* Tema Light (Base) */
+  --bg: #f4f7fa;
+  --surface: #ffffff;
+  --text: #1a1f36;
+  --muted: #697386;
+  --blue: #3d8bff;
+  /* ... mantenha suas cores de marketplace ... */
+}
+
+/* Classe para o Dark Mode */
+body.dark-theme {
+  --bg: #0d1117;
+  --surface: #161c2d;
+  --text: #e2e8f7;
+  --muted: #7a85a0;
+  --line: rgba(255,255,255,0.08);
+}
+
+/* Miniaturas Sobrepostas (Moderno) */
+.oc-stack {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+.oc-thumb-stack {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid var(--surface);
+  object-fit: cover;
+  margin-left: -12px; /* Efeito de sobreposição */
+  transition: transform 0.2s;
+}
+.oc-thumb-stack:first-child { margin-left: 0; }
+.oc-thumb-stack:hover { transform: translateY(-4px); z-index: 10; }
+
+.order-qty-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-left: 8px;
+}

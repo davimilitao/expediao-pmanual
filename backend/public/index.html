@@ -175,6 +175,16 @@
 
 <div class="topbar">
   <div class="brand">EXPEDICAO<span>/PRO</span></div>
+  <div class="topbar-controls">
+  <label class="switch-label">
+    <span>Automação</span>
+    <input type="checkbox" id="autoImportToggle" onchange="toggleAutomation()">
+  </label>
+  
+  <button class="btn-theme" onclick="toggleDarkMode()">
+    <span id="themeIcon">🌙</span> Alterna
+  </button>
+</div>
   <div class="topbar-right">
     <div class="clock" id="clock">--:--:--</div>
     <div class="user-chip" id="userChip" onclick="doLogout()">
