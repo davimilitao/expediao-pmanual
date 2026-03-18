@@ -88,6 +88,7 @@ app.get('/embalagens', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'embalag
 app.get('/importar', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'importar.html')));
 app.get('/catalogo', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'catalogo.html')));
 app.get('/compras', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'compras.html')));
+app.get('/financas', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'financas.html')));
 
 // ✅ uploads locais (fotos reais do estoque)
 const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads');
@@ -1079,54 +1080,81 @@ const sheets = google.sheets({ version: 'v4', auth: sheetsAuth });
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID; 
 const SHEET_NAME = 'Despesas'; // Nome exato da aba na sua planilha
 
-// 1. LER DESPESAS
+// --- Rota GET: Ler despesas da planilha ---
 app.get('/api/despesas', async (req, res, next) => {
   try {
-    if (!SPREADSHEET_ID) return res.status(500).json({ error: 'SPREADSHEET_ID não configurado no .env' });
+    if (!SPREADSHEET_ID) return res.status(500).json({ error: 'SPREADSHEET_ID não configurado' });
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:E`, // Colunas: A(Data), B(Nome), C(Valor), D(Local), E(Situação)
+      range: `${SHEET_NAME}!A:E`, 
     });
 
     const rows = response.data.values || [];
-    if (rows.length === 0) return res.json({ items: [] });
+    if (rows.length <= 1) return res.json({ items: [] });
 
-    // Ignora a linha 1 (Cabeçalho) e mapeia os dados
-    const data = rows.slice(1).map((r, index) => ({
-      id: index, // Usamos o índice da linha como ID temporário
-      data: r[0] || '',
-      nome: r[1] || '',
-      valor: parseFloat((r[2] || '0').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0,
-      local: r[3] || '',
-      situacao: (r[4] || '').toLowerCase().trim()
-    }));
+    const data = rows.slice(1).map((r, index) => {
+      const dataBruta = r[0] ? String(r[0]).trim() : '';
+      let nomeBruto = r[1] ? String(r[1]).trim() : '';
+      let descricaoBruta = r[2] ? String(r[2]).trim() : '';
+      const valorBruto = r[3] ? String(r[3]) : '0';
+      const situacaoBruta = r[4] ? String(r[4]).trim().toLowerCase() : 'pendente';
 
-    // Ordena da mais recente para a mais antiga (assumindo formato DD/MM/YYYY)
-    data.sort((a, b) => {
-      const [d1, m1, y1] = a.data.split('/');
-      const [d2, m2, y2] = b.data.split('/');
-      return new Date(`${y2}-${m2}-${d2}`) - new Date(`${y1}-${m1}-${d1}`);
+      // Proteção para os registros antigos: se a Categoria(B) estiver vazia, chama de 'Outros'
+      if (!nomeBruto && descricaoBruta) {
+        nomeBruto = 'Outros';
+      }
+
+      // Limpeza agressiva da Moeda
+      let valorLimpo = valorBruto.replace(/[R$\s]/g, '');
+      if (valorLimpo.includes(',') && valorLimpo.includes('.')) {
+         valorLimpo = valorLimpo.replace(/\./g, '').replace(',', '.');
+      } else {
+         valorLimpo = valorLimpo.replace(',', '.');
+      }
+      const valorNumerico = parseFloat(valorLimpo) || 0;
+
+      let timestamp = 0;
+      if (dataBruta.includes('/')) {
+        const parts = dataBruta.split('/');
+        if (parts.length === 3) timestamp = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`).getTime();
+      } else {
+        timestamp = new Date().getTime() - (index * 10000); // Mantém ordem dos antigos
+      }
+
+      return {
+        id: index,
+        data: dataBruta,
+        timestamp: timestamp,
+        nome: nomeBruto,
+        descricao: descricaoBruta,
+        valor: valorNumerico,
+        situacao: situacaoBruta
+      };
     });
 
-    res.json({ items: data });
+    const despesasValidas = data.filter(d => d.nome !== '' || d.descricao !== '' || d.valor > 0);
+    despesasValidas.sort((a, b) => b.timestamp - a.timestamp);
+
+    return res.json({ items: despesasValidas });
   } catch (err) {
     console.error('[/api/despesas GET]', err);
-    next(err);
+    return next(err);
   }
 });
 
-// 2. ADICIONAR NOVA DESPESA RAPIDAMENTE
+// --- Rota POST: Adicionar nova despesa ---
 app.post('/api/despesas', async (req, res, next) => {
   try {
-    const { data, nome, valor, local, situacao } = req.body;
+    const { data, nome, descricao, valor, situacao } = req.body;
     
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:E`,
+      range: `${SHEET_NAME}!A:A`, // ANCORAGEM FORÇADA NA COLUNA A
       valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS', // FORÇA A CRIAÇÃO DE UMA LINHA NOVA E LIMPA
       requestBody: {
-        values: [[ data, nome, valor, local, situacao ]]
+        values: [[ data, nome, descricao || '', valor, situacao ]] 
       }
     });
 
@@ -1136,6 +1164,7 @@ app.post('/api/despesas', async (req, res, next) => {
     next(err);
   }
 });
+
 // ---------------- Errors ----------------
 app.use((err, req, res, next) => {
   const status = err.statusCode || 500;

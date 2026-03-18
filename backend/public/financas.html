@@ -4,103 +4,158 @@
   <meta charset="UTF-8">
   <title>Finanças — Expedição Pro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    .fin-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .fin-layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; padding: 24px; max-width: 1400px; margin: 0 auto; }
     
-    /* Painel de Inserção Rápida */
-    .fast-add-panel { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid var(--border); height: fit-content; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; }
-    .form-input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text-primary); }
-    .btn-add { width: 100%; padding: 12px; background: var(--accent); color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+    /* Panel Add */
+    .fast-add-panel { background: var(--surface); padding: 24px; border-radius: 16px; border: 1px solid var(--border); position: sticky; top: 80px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-primary); font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; }
+    .form-input:focus { border-color: var(--accent); }
+    .btn-add { width: 100%; padding: 14px; background: var(--accent); color: #fff; font-weight: 900; font-size: 14px; border: none; border-radius: 8px; cursor: pointer; transition: filter 0.2s; }
+    .btn-add:hover { filter: brightness(1.1); }
     
-    /* Dashboard e Tabela */
-    .dashboard-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
-    .dash-card { background: var(--surface); padding: 16px; border-radius: 12px; border: 1px solid var(--border); }
-    .dash-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: bold; }
-    .dash-value { font-size: 24px; font-weight: 900; margin-top: 5px; }
+    /* Dash e Filtros */
+    .dash-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+    .dashboard-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; flex: 1; }
+    .dash-card { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--card-shadow); }
+    .dash-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 900; letter-spacing: 0.5px; }
+    .dash-value { font-family: 'Space Mono', monospace; font-size: 26px; font-weight: 700; margin-top: 8px; }
     .val-pendente { color: var(--warning); }
     .val-pago { color: var(--success); }
 
-    .expenses-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; }
-    .expenses-table th, .expenses-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
-    .tag-status { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-    .tag-pago { background: rgba(35, 134, 54, 0.2); color: var(--success); }
-    .tag-pendente { background: rgba(210, 153, 34, 0.2); color: var(--warning); }
+    /* Control Bar (Filtros Simples) */
+    .control-bar { display: flex; gap: 12px; margin-bottom: 0; align-items: center; background: var(--surface); padding: 12px 16px; border-radius: 12px 12px 0 0; border: 1px solid var(--border); border-bottom: none; }
+    .filter-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text-secondary); font-weight: 700; font-size: 12px; cursor: pointer; transition: 0.2s; }
+    .filter-btn.active { background: var(--text-primary); color: var(--bg); border-color: var(--text-primary); }
+    .filter-btn-pago.active { background: var(--success); color: #fff; border-color: var(--success); }
+    .filter-btn-pend.active { background: var(--warning); color: #000; border-color: var(--warning); }
+    
+    /* Sistema de Abas (Ficheiro) */
+    .tabs-container { display: flex; overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-bottom: none; border-radius: 0; padding: 12px 16px 0 16px; gap: 4px; scrollbar-width: none; }
+    .tabs-container::-webkit-scrollbar { display: none; }
+    .tab-btn { padding: 10px 20px; background: var(--bg); border: 1px solid var(--border); border-bottom: none; border-radius: 10px 10px 0 0; color: var(--text-secondary); font-weight: 700; font-size: 13px; cursor: pointer; opacity: 0.7; transition: 0.2s; white-space: nowrap; }
+    .tab-btn:hover { opacity: 1; }
+    .tab-btn.active { background: var(--surface); color: var(--accent); opacity: 1; border-color: var(--border); padding-bottom: 12px; margin-bottom: -1px; box-shadow: 0 -3px 0 var(--accent) inset; }
 
-    @media(max-width: 800px) { .fin-layout { grid-template-columns: 1fr; } .dashboard-cards { grid-template-columns: 1fr; } }
+    /* Table Modern */
+    .table-container { background: var(--surface); border-radius: 0 0 16px 16px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--card-shadow); }
+    .modern-table { width: 100%; border-collapse: collapse; }
+    .modern-table th { padding: 16px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-secondary); background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); }
+    .modern-table td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .modern-table tr:hover { background: rgba(255,255,255,0.02); }
+    
+    .td-date { color: var(--text-secondary); font-size: 12px; font-family: 'Space Mono', monospace; }
+    .td-cat { font-weight: 900; color: var(--text-primary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .td-desc { color: var(--text-secondary); font-size: 13px; }
+    .td-value { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; }
+    
+    .status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+    .s-pago { background: rgba(35, 134, 54, 0.15); color: var(--success); border: 1px solid rgba(35, 134, 54, 0.3); }
+    .s-pendente { background: rgba(210, 153, 34, 0.15); color: var(--warning); border: 1px solid rgba(210, 153, 34, 0.3); }
+
+    @media(max-width: 900px) { .fin-layout { grid-template-columns: 1fr; } .dashboard-cards { grid-template-columns: 1fr; } .control-bar { flex-wrap: wrap; } }
   </style>
 </head>
 <body class="dark-theme">
 
 <div class="topbar">
   <div class="brand">EXPEDICAO<span>/FINANÇAS</span></div>
-  <a href="/" style="color: var(--accent); text-decoration: none; font-weight: bold; font-size: 13px;">← Voltar ao Painel</a>
+  <a href="/" style="color: var(--accent); text-decoration: none; font-weight: bold; font-size: 13px;">← Voltar</a>
 </div>
 
 <div class="fin-layout">
-  <div class="fast-add-panel">
-    <h3 style="margin-bottom: 15px;">Nova Despesa Rápida</h3>
-    <form id="formDespesa" onsubmit="adicionarDespesa(event)">
-      <div class="form-group">
-        <label>Data</label>
-        <input type="text" id="add-data" class="form-input" placeholder="DD/MM/AAAA" required>
-      </div>
-      <div class="form-group">
-        <label>Nome / Descrição (Ex: Fita Crepe)</label>
-        <input type="text" id="add-nome" class="form-input" required>
-      </div>
-      <div class="form-group">
-        <label>Valor (R$)</label>
-        <input type="text" id="add-valor" class="form-input" placeholder="10,50" required>
-      </div>
-      <div class="form-group">
-        <label>Local / Fornecedor</label>
-        <input type="text" id="add-local" class="form-input" placeholder="Mercado Livre">
-      </div>
-      <div class="form-group">
-        <label>Situação</label>
-        <select id="add-situacao" class="form-input">
-          <option value="Pago">Pago</option>
-          <option value="Pendente">Pendente</option>
-        </select>
-      </div>
-      <button type="submit" class="btn-add" id="btnSalvar">Salvar na Planilha</button>
-    </form>
+  
+  <div>
+    <div class="fast-add-panel">
+      <h3 style="margin-bottom: 20px;">Lançamento de Despesa</h3>
+      <form id="formDespesa" onsubmit="adicionarDespesa(event)">
+        <div class="form-group">
+          <label>Data</label>
+          <input type="text" id="add-data" class="form-input" placeholder="DD/MM/AAAA" required>
+        </div>
+        <div class="form-group">
+          <label>Categoria (Nome)</label>
+          <select id="add-nome" class="form-input" required>
+            <option value="Transporte / Frete">Transporte / Frete</option>
+            <option value="Embalagens / Etiquetas">Embalagens / Etiquetas</option>
+            <option value="Impostos / Contabilidade">Impostos / Contabilidade</option>
+            <option value="Sistemas / Mensalidades">Sistemas / Mensalidades (Ex: Bling)</option>
+            <option value="Infraestrutura / Obras">Infraestrutura / Obras / Prateleiras</option>
+            <option value="Pró-labore / Pagamentos">Pró-labore / Pagamentos</option>
+            <option value="Marketing / Ads">Marketing / Ads</option>
+            <option value="Tarifas Marketplace">Tarifas Marketplace</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Descrição Opcional</label>
+          <input type="text" id="add-descricao" class="form-input" placeholder="Ex: Bobina Plástico Bolha">
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="text" id="add-valor" class="form-input" placeholder="0,00" required>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="add-situacao" class="form-input">
+            <option value="Pago">Pago</option>
+            <option value="Pendente">Pendente</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-add" id="btnSalvar">+ Adicionar Despesa</button>
+      </form>
+    </div>
   </div>
 
-  <div>
-    <div class="dashboard-cards">
-      <div class="dash-card">
-        <div class="dash-label">Total do Mês</div>
-        <div class="dash-value" id="dash-total">R$ 0,00</div>
-      </div>
-      <div class="dash-card">
-        <div class="dash-label">Pago</div>
-        <div class="dash-value val-pago" id="dash-pago">R$ 0,00</div>
-      </div>
-      <div class="dash-card">
-        <div class="dash-label">Pendente (A Pagar)</div>
-        <div class="dash-value val-pendente" id="dash-pendente">R$ 0,00</div>
+  <div style="display: flex; flex-direction: column;">
+    
+    <div class="dash-header">
+      <div class="dashboard-cards">
+        <div class="dash-card">
+          <div class="dash-label">Total Geral Despesas</div>
+          <div class="dash-value" id="dash-total">R$ 0,00</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-label">Total Geral Pago</div>
+          <div class="dash-value val-pago" id="dash-pago">R$ 0,00</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-label">Total Geral Pendente</div>
+          <div class="dash-value val-pendente" id="dash-pendente">R$ 0,00</div>
+        </div>
       </div>
     </div>
 
-    <table class="expenses-table">
-      <thead>
-        <tr>
-          <th>Data</th>
-          <th>Descrição</th>
-          <th>Local</th>
-          <th>Valor</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="listaDespesas">
-        <tr><td colspan="5" style="text-align:center;">Carregando despesas...</td></tr>
-      </tbody>
-    </table>
+    <div class="control-bar">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Todos</button>
+      <button class="filter-btn filter-btn-pago" data-filter="pago" onclick="setFilter('pago')">Somente Pagos</button>
+      <button class="filter-btn filter-btn-pend" data-filter="pendente" onclick="setFilter('pendente')">Somente Pendentes</button>
+    </div>
+
+    <div class="tabs-container" id="tabsContainer">
+      </div>
+
+    <div class="table-container">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Categoria</th>
+            <th>Descrição</th>
+            <th>Valor</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="listaDespesas">
+          <tr><td colspan="5" style="text-align:center; padding: 40px;">Carregando dados...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 </div>
 
