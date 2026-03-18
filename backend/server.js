@@ -1275,55 +1275,44 @@ app.post('/bling/disconnect', async (req, res) => {
   res.json({ ok: true });
 });
 
-// ── LISTAR NFs DO DIA ─────────────────────────────────────────────
-// GET /bling/pedidos?data=2026-03-18
-// Retorna resumo das NFs — itens são carregados sob demanda via /bling/pedidos/:id
+// --- LISTAR NFs DO DIA (BLING v3) ---
 app.get('/bling/pedidos', async (req, res, next) => {
   try {
-    const data   = req.query.data || new Date().toISOString().split('T')[0];
-    const pagina = Number(req.query.pagina || 1);
-
-    // Bling v3 usa dd/mm/yyyy, não yyyy-mm-dd
-    const [y, m, d] = data.split('-');
-    const dataBling = `${d}/${m}/${y}`;
-
+    // Garante que a data está no formato YYYY-MM-DD (ex: 2026-03-17)
+    const dataRaw = req.query.data || new Date().toISOString().split('T')[0];
+    
+    // Removido o filtro 'situacao' para evitar erro de parâmetro inválido
     const params = new URLSearchParams({
-      dataEmissaoInicial: dataBling,
-      dataEmissaoFinal:   dataBling,
-      pagina,
-      limite: 100,
+      dataEmissaoInicial: dataRaw,
+      dataEmissaoFinal:   dataRaw,
+      pagina: Number(req.query.pagina || 1),
+      limite: 100
     });
 
-    console.log(`[bling/pedidos] buscando NFs data=${dataBling} params=${params.toString()}`);
-    const resp  = await blingFetch(`/nfe?${params}`);
-    console.log(`[bling/pedidos] resp keys:`, Object.keys(resp), '| data length:', resp.data?.length ?? 'null');
-    const notas = resp.data || [];
+    console.log(`[Bling] Buscando NFe para a data: ${dataRaw}`);
+    const resp = await blingFetch(`/nfe?${params}`);
+    
+    // Se vier vazio, o log mostrará a estrutura recebida
+    if (!resp.data || resp.data.length === 0) {
+      console.log('[Bling] Resposta sem dados:', JSON.stringify(resp));
+    }
 
-    const items = notas.map(n => ({
-      id:          n.id,
-      numero:      n.numero,
-      numeroPedido: null,           // carregado sob demanda
+    const items = (resp.data || []).map(n => ({
+      id: n.id,
+      numero: n.numero,
       dataEmissao: n.dataEmissao,
-      situacao:    n.situacao?.descricao || '',
-      cliente:     { nome: n.contato?.nome || '' },
-      marketplace: detectarMkt(n),
-      valorTotal:  n.valorTotal || 0,
-      itens:       [],              // carregados sob demanda
-      detalhado:   false,
+      situacao: n.situacao?.descricao || 'N/A',
+      cliente: { nome: n.contato?.nome || 'Cliente não identificado' },
+      valorTotal: n.valorTotal || 0,
+      itens: []
     }));
 
-    // LOG: mostra IDs internos do Bling para diagnóstico
-    if (items.length > 0) {
-      console.log('[bling/pedidos] IDs internos:', items.slice(0,3).map(i => `NF${i.numero}=id:${i.id}`).join(', '));
-    }
-    res.json({ items, total: items.length, data });
+    res.json({ items, total: items.length, data: dataRaw });
   } catch(err) {
-    if (err.message === 'bling_not_authorized') return res.status(401).json({ error: 'bling_not_authorized' });
-    console.error('[GET /bling/pedidos]', err);
-    next(err);
+    console.error('[GET /bling/pedidos] Erro:', err.message);
+    res.status(500).json({ error: err.message, raw: err.rawResponse || null });
   }
 });
-
 // ── DETALHES DE UMA NF (com itens) ───────────────────────────────
 // GET /bling/pedidos/:id
 app.get('/bling/pedidos/:id', async (req, res, next) => {
