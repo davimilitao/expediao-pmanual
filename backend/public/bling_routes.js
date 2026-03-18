@@ -162,10 +162,11 @@ app.get('/bling/pedidos/:id', async (req, res, next) => {
       valorTotal:   n.valorTotal || n.totalProdutos || 0,
       detalhado:    true,
       itens: (n.itens || []).map(it => ({
-        sku:   it.codigo   || it.produto?.codigo   || '',
-        nome:  it.descricao || it.produto?.descricao || '',
-        qty:   Number(it.quantidade || 1),
-        preco: Number(it.valor || 0),
+        // Bling v3 NF: campos diretos no item
+        sku:   safeTrim(it.codigo || it.produto?.codigo || ''),
+        nome:  safeTrim(it.descricao || it.produto?.descricao || ''),
+        qty:   Number(it.quantidade ?? it.qty ?? 1),
+        preco: Number(it.valor ?? it.valorUnitario ?? 0),
       })),
     };
 
@@ -173,6 +174,18 @@ app.get('/bling/pedidos/:id', async (req, res, next) => {
   } catch(err) {
     if (err.message === 'bling_not_authorized') return res.status(401).json({ error: 'bling_not_authorized' });
     console.error('[GET /bling/pedidos/:id]', err);
+    next(err);
+  }
+});
+
+
+// ── DEBUG: ver resposta bruta da API do Bling ────────────────────
+// GET /bling/debug/nfe/:id  — remover em produção após diagnóstico
+app.get('/bling/debug/nfe/:id', async (req, res, next) => {
+  try {
+    const raw = await blingFetch(`/nfe/${req.params.id}`);
+    res.json(raw); // retorna tudo como veio do Bling
+  } catch(err) {
     next(err);
   }
 });
