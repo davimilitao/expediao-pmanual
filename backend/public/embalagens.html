@@ -4,153 +4,12 @@
   <meta charset="UTF-8" />
   <title>Embalagens — Expedição Pro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg:#0d1117; --surface:#161c2d; --s2:#1e2640; --s3:#242e4c;
-      --line:rgba(255,255,255,0.07); --text:#e2e8f7; --muted:#7a85a0; --muted2:#4a5268;
-      --ml:#ffe600; --shop:#ff6633; --green:#00e676; --red:#ff4060;
-      --blue:#3d8bff; --warn:#ffb300; --purple:#a855f7;
-      --r:12px; --r2:18px; --sh:0 4px 24px rgba(0,0,0,.35);
-    }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
-
-    .topbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;}
-    .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ml),var(--blue),var(--shop));}
-    .brand{font-family:'Space Mono',monospace;font-weight:700;font-size:15px;color:var(--ml);letter-spacing:1px;}
-    .brand span{color:var(--muted);font-weight:400;}
-    .topbar-right{display:flex;gap:8px;align-items:center;}
-    .link{color:var(--blue);text-decoration:none;font-weight:700;font-size:13px;}
-    .link:hover{text-decoration:underline;}
-
-    .page{max-width:1100px;margin:0 auto;padding:20px 16px;display:flex;flex-direction:column;gap:20px;}
-
-    .btn{padding:9px 16px;border-radius:var(--r);border:1px solid var(--line);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;transition:.15s;}
-    .btn:disabled{opacity:.35;cursor:not-allowed;}
-    .btn-primary{background:var(--blue);color:#fff;border-color:transparent;}
-    .btn-primary:not(:disabled):hover{filter:brightness(1.15);}
-    .btn-ghost{background:var(--s2);color:var(--muted);}
-    .btn-ghost:not(:disabled):hover{background:var(--s3);color:var(--text);}
-    .btn-danger{background:rgba(255,64,96,.15);color:var(--red);border-color:rgba(255,64,96,.3);}
-    .btn-danger:not(:disabled):hover{background:rgba(255,64,96,.25);}
-    .btn-warn{background:rgba(255,179,0,.15);color:var(--warn);border-color:rgba(255,179,0,.3);}
-    .btn-warn:not(:disabled):hover{background:rgba(255,179,0,.25);}
-    .btn-sm{padding:6px 10px;font-size:12px;border-radius:8px;}
-
-    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:20px;}
-    .card-title{font-size:16px;font-weight:900;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
-
-    .field{display:flex;flex-direction:column;gap:5px;}
-    .field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
-    input,select{background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;width:100%;transition:.15s;}
-    input:focus,select:focus{border-color:rgba(61,139,255,.45);box-shadow:0 0 0 3px rgba(61,139,255,.1);}
-    input::placeholder{color:var(--muted2);}
-    select option{background:var(--s2);}
-
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-    .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
-    @media(max-width:700px){.grid2,.grid3,.grid4{grid-template-columns:1fr 1fr;}}
-    @media(max-width:480px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
-
-    /* ALERTAS */
-    .alerts-area{display:flex;flex-direction:column;gap:8px;}
-    .alert-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--r);border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.07);}
-    .alert-item.warn{border-color:rgba(255,179,0,.3);background:rgba(255,179,0,.07);}
-    .alert-icon{font-size:20px;flex-shrink:0;}
-    .alert-body{flex:1;}
-    .alert-title{font-weight:700;font-size:14px;}
-    .alert-sub{font-size:12px;color:var(--muted);margin-top:2px;}
-    .alert-item .alert-title{color:var(--red);}
-    .alert-item.warn .alert-title{color:var(--warn);}
-
-    /* EMBALAGEM CARDS */
-    .emb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
-
-    .emb-card{background:var(--s2);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;transition:.2s;}
-    .emb-card:hover{border-color:rgba(255,255,255,.12);}
-    .emb-card.low-stock{border-color:rgba(255,64,96,.35);background:rgba(255,64,96,.04);}
-    .emb-card.warn-stock{border-color:rgba(255,179,0,.35);background:rgba(255,179,0,.03);}
-
-    .emb-header{padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);}
-    .emb-name{font-weight:900;font-size:15px;}
-    .emb-type{font-size:11px;color:var(--muted);margin-top:3px;}
-    .emb-status-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0;}
-    .badge-ok{background:rgba(0,230,118,.12);color:var(--green);border:1px solid rgba(0,230,118,.25);}
-    .badge-warn{background:rgba(255,179,0,.12);color:var(--warn);border:1px solid rgba(255,179,0,.25);}
-    .badge-low{background:rgba(255,64,96,.12);color:var(--red);border:1px solid rgba(255,64,96,.25);}
-
-    .emb-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
-
-    .emb-dims{display:flex;gap:8px;flex-wrap:wrap;}
-    .dim-tag{font-family:'Space Mono',monospace;font-size:11px;color:var(--blue);background:rgba(61,139,255,.1);border:1px solid rgba(61,139,255,.2);padding:3px 8px;border-radius:6px;}
-
-    .stock-row{display:flex;align-items:center;gap:10px;}
-    .stock-num{font-family:'Space Mono',monospace;font-size:28px;font-weight:700;line-height:1;}
-    .stock-num.ok{color:var(--green);}
-    .stock-num.warn{color:var(--warn);}
-    .stock-num.low{color:var(--red);}
-    .stock-info{display:flex;flex-direction:column;gap:2px;}
-    .stock-label{font-size:11px;color:var(--muted);}
-    .stock-min{font-size:11px;color:var(--muted2);}
-
-    .stock-bar-bg{width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden;}
-    .stock-bar-fill{height:100%;border-radius:3px;transition:width .4s;}
-    .stock-bar-fill.ok{background:var(--green);}
-    .stock-bar-fill.warn{background:var(--warn);}
-    .stock-bar-fill.low{background:var(--red);}
-
-    .emb-skus{font-size:11px;color:var(--muted);}
-    .emb-skus strong{color:var(--text);}
-
-    .emb-actions{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:space-between;align-items:center;}
-
-    /* MODAL */
-    .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;}
-    .modal.hidden{display:none;}
-    .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);}
-    .modal-panel{position:relative;width:min(680px,100%);max-height:90vh;background:var(--surface);border-radius:var(--r2);box-shadow:0 20px 70px rgba(0,0,0,.5);overflow:hidden;display:flex;flex-direction:column;}
-    .modal-header{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
-    .modal-title{font-size:17px;font-weight:900;}
-    .modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;}
-    .modal-close:hover{background:var(--s2);color:var(--text);}
-    .modal-body{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
-    .modal-footer{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;}
-
-    /* SUGESTÃO SKUS */
-    .sugg-area{background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:80px;}
-    .sugg-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;}
-    .sugg-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;}
-    .sugg-item{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--s3);border-radius:8px;font-size:12px;}
-    .sugg-sku{font-family:'Space Mono',monospace;color:var(--blue);font-weight:700;white-space:nowrap;}
-    .sugg-name{color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .sugg-dims{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap;}
-    .sugg-empty{font-size:12px;color:var(--muted2);font-style:italic;}
-
-    /* AJUSTE ESTOQUE */
-    .adj-row{display:flex;gap:8px;align-items:flex-end;}
-    .adj-row input{width:100px;}
-
-    /* TOAST */
-    .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--s2);border:1px solid var(--line);border-radius:var(--r2);padding:11px 20px;font-weight:700;font-size:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:200;transition:transform .25s,opacity .25s;opacity:0;white-space:nowrap;pointer-events:none;}
-    .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-    .toast.ok{border-color:rgba(0,230,118,.4);color:var(--green);}
-    .toast.err{border-color:rgba(255,64,96,.4);color:var(--red);}
-    .toast.info{border-color:rgba(61,139,255,.4);color:var(--blue);}
-
-    .empty-state{text-align:center;padding:40px;color:var(--muted2);font-size:14px;}
-    .sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-    .sec-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;}
-    .divider{height:1px;background:var(--line);}
-    .muted{color:var(--muted);}
-    .muted2{color:var(--muted2);}
-  </style>
+  <link rel="stylesheet" href="/erp.css" />
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">EXPEDICAO<span>/PRO</span></div>
   <div class="topbar-right">
     <a class="link" href="/">← Painel</a>
     <a class="link" href="/pedidos">Pedidos</a>
@@ -158,7 +17,16 @@
   </div>
 </div>
 
-<div class="page">
+<div class="erp-layout">
+  <div id="sidebar-placeholder"></div>
+  <main class="erp-main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">🎁 Embalagens</h1>
+      <p class="page-subtitle">Controle de insumos e embalagens</p>
+    </div>
+  </div>
+  <div class="page-content">
 
   <!-- ALERTAS -->
   <div class="alerts-area" id="alertsArea" style="display:none;"></div>
@@ -730,5 +598,6 @@ window.updateSuggestions = updateSuggestions;
 
 loadAll();
 </script>
+<script src="/menu.js"></script>
 </body>
 </html>

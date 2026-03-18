@@ -17,7 +17,7 @@
     html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow:hidden;}
 
     /* TOPBAR */
-    .topbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:relative;flex-shrink:0;}
+    .topbar{display:none!important;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:relative;flex-shrink:0;}
     .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ml),var(--blue),var(--shop));}
     .brand{font-family:'Space Mono',monospace;font-weight:700;font-size:15px;color:var(--ml);letter-spacing:1px;}
     .brand span{color:var(--muted);font-weight:400;}
@@ -160,19 +160,12 @@
     .btn-ghost{background:var(--s3);color:var(--muted);}
     .btn-ghost:hover{color:var(--text);}
   </style>
+  <link rel="stylesheet" href="/erp.css">
 </head>
 <body>
-<div class="app">
-
-  <div class="topbar">
-    <div class="brand">EXPEDICAO<span>/PRO</span></div>
-    <div class="topbar-right">
-      <a class="tlink" href="/">← Painel</a>
-      <a class="tlink" href="/admin">Admin</a>
-      <a class="tlink" href="/importar">Importar CSV</a>
-    </div>
-  </div>
-
+<div class="erp-layout">
+  <div id="sidebar-placeholder"></div>
+  <main style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
   <div class="body">
 
     <!-- SIDEBAR FILTROS -->
@@ -219,6 +212,8 @@
 
   </div>
 </div>
+
+  </main>
 
 <!-- MODAL -->
 <div class="modal hidden" id="modal">
@@ -674,5 +669,6 @@ function showSkeleton() {
 // ── INIT ──
 boot();
 </script>
+<script src="/menu.js"></script>
 </body>
 </html>

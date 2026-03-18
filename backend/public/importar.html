@@ -4,198 +4,161 @@
   <meta charset="UTF-8" />
   <title>Importar Produtos — Expedição Pro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/erp.css" />
   <style>
-    :root {
-      --bg:#0d1117; --surface:#161c2d; --s2:#1e2640; --s3:#242e4c;
-      --line:rgba(255,255,255,0.07); --text:#e2e8f7; --muted:#7a85a0; --muted2:#4a5268;
-      --ml:#ffe600; --green:#00e676; --red:#ff4060; --blue:#3d8bff; --warn:#ffb300;
-      --shop:#ff6633; --r:12px; --r2:18px;
+    .dropzone {
+      border: 2px dashed var(--border-default); border-radius: var(--r-lg);
+      padding: 48px 32px; text-align: center; cursor: pointer; transition: .2s;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      background: var(--depth-4);
     }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
-
-    .topbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;}
-    .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ml),var(--blue),var(--shop));}
-    .brand{font-family:'Space Mono',monospace;font-weight:700;font-size:15px;color:var(--ml);letter-spacing:1px;}
-    .brand span{color:var(--muted);font-weight:400;}
-    .topbar-right{display:flex;gap:8px;align-items:center;}
-    .tlink{color:var(--blue);text-decoration:none;font-weight:700;font-size:13px;}
-    .tlink:hover{text-decoration:underline;}
-
-    .page{max-width:780px;margin:0 auto;padding:32px 16px;display:flex;flex-direction:column;gap:20px;}
-
-    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:28px;}
-
-    /* DROP ZONE */
-    .dropzone{
-      border:2px dashed var(--line);border-radius:var(--r2);
-      padding:48px 32px;text-align:center;cursor:pointer;
-      transition:.2s;display:flex;flex-direction:column;align-items:center;gap:12px;
-      background:var(--s2);
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: rgba(59,130,246,.5); background: rgba(59,130,246,.05);
     }
-    .dropzone:hover,.dropzone.drag-over{border-color:rgba(61,139,255,.5);background:rgba(61,139,255,.05);}
-    .dropzone.has-file{border-color:rgba(0,230,118,.4);background:rgba(0,230,118,.04);}
-    .dropzone input[type=file]{display:none;}
-    .dz-icon{font-size:48px;opacity:.7;}
-    .dz-title{font-size:18px;font-weight:900;}
-    .dz-sub{font-size:13px;color:var(--muted);max-width:360px;line-height:1.5;}
-    .dz-file-name{font-family:'Space Mono',monospace;font-size:13px;color:var(--green);font-weight:700;margin-top:4px;}
+    .dropzone.has-file {
+      border-color: rgba(16,185,129,.4); background: rgba(16,185,129,.04);
+    }
+    .dropzone input[type=file] { display: none; }
+    .dz-icon   { font-size: 44px; opacity: .7; }
+    .dz-title  { font-size: 17px; font-weight: 700; }
+    .dz-sub    { font-size: 13px; color: var(--text-secondary); max-width: 360px; line-height: 1.5; }
+    .dz-file-name { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--accent-green); font-weight: 700; }
 
-    /* PREVIEW */
-    .preview-card{background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:none;}
-    .preview-card.show{display:block;}
-    .preview-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+    .preview-card { display: none; }
+    .preview-card.show { display: block; }
+    .preview-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
 
-    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
-    @media(max-width:600px){.stats-grid{grid-template-columns:1fr 1fr;}}
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 14px; }
+    @media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
 
-    .stat-box{background:var(--s3);border-radius:var(--r);padding:12px 14px;text-align:center;}
-    .stat-num{font-family:'Space Mono',monospace;font-size:26px;font-weight:700;line-height:1;}
-    .stat-num.green{color:var(--green);}
-    .stat-num.blue{color:var(--blue);}
-    .stat-num.warn{color:var(--warn);}
-    .stat-num.muted{color:var(--muted);}
-    .stat-label{font-size:11px;color:var(--muted2);margin-top:4px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+    .stat-box { background: var(--depth-4); border-radius: var(--r-md); padding: 12px 14px; text-align: center; }
+    .stat-num { font-family: 'Space Mono', monospace; font-size: 24px; font-weight: 700; line-height: 1; }
+    .stat-num.green { color: var(--accent-green); }
+    .stat-num.blue  { color: var(--accent-blue); }
+    .stat-num.warn  { color: var(--accent-yellow); }
+    .stat-num.muted { color: var(--text-muted); }
+    .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
 
-    .sample-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
-    .sample-table{width:100%;border-collapse:collapse;font-size:12px;}
-    .sample-table th{text-align:left;padding:6px 8px;background:var(--s3);color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}
-    .sample-table td{padding:6px 8px;border-top:1px solid var(--line);font-family:'Space Mono',monospace;font-size:11px;color:var(--text);}
-    .sample-table tr:hover td{background:var(--s3);}
-    .td-name{font-family:'DM Sans',sans-serif!important;font-size:12px!important;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .td-dim{color:var(--blue)!important;}
-    .td-empty{color:var(--muted2)!important;}
+    .sample-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
+    .sample-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .sample-table th { padding: 7px 10px; text-align: left; background: var(--depth-4); color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .4px; }
+    .sample-table td { padding: 7px 10px; border-top: 1px solid var(--border-subtle); font-family: 'Space Mono', monospace; font-size: 11px; }
+    .td-name  { font-family: var(--font-body) !important; font-size: 12px !important; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td-dim   { color: var(--accent-blue) !important; }
+    .td-empty { color: var(--text-muted) !important; }
 
-    /* PROGRESS */
-    .progress-wrap{display:none;}
-    .progress-wrap.show{display:flex;flex-direction:column;gap:8px;}
-    .progress-bar-bg{width:100%;height:10px;background:var(--s3);border-radius:5px;overflow:hidden;}
-    .progress-bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .3s;}
-    .progress-label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;}
-    .progress-label span{font-family:'Space Mono',monospace;color:var(--text);font-weight:700;}
+    .progress-wrap { display: none; }
+    .progress-wrap.show { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .progress-label { font-size: 13px; color: var(--text-secondary); display: flex; justify-content: space-between; }
+    .progress-label span { font-family: 'Space Mono', monospace; color: var(--text-primary); font-weight: 700; }
+    .progress-bar-bg  { width: 100%; height: 8px; background: var(--depth-5); border-radius: var(--r-full); overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: var(--r-full); background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); transition: width .3s; }
 
-    /* LOG */
-    .log-area{background:var(--s3);border-radius:var(--r);padding:12px 14px;max-height:200px;overflow-y:auto;font-family:'Space Mono',monospace;font-size:11px;line-height:1.8;display:none;}
-    .log-area.show{display:block;}
-    .log-area::-webkit-scrollbar{width:4px;}
-    .log-area::-webkit-scrollbar-thumb{background:var(--s2);border-radius:2px;}
-    .log-ok{color:var(--green);}
-    .log-warn{color:var(--warn);}
-    .log-err{color:var(--red);}
-    .log-info{color:var(--muted);}
+    .log-area { display: none; background: var(--depth-5); border-radius: var(--r-md); padding: 12px 14px; max-height: 200px; overflow-y: auto; font-family: 'Space Mono', monospace; font-size: 11px; line-height: 1.8; margin-top: 10px; }
+    .log-area.show { display: block; }
+    .log-area::-webkit-scrollbar { width: 4px; }
+    .log-area::-webkit-scrollbar-thumb { background: var(--depth-3); border-radius: 2px; }
+    .log-ok   { color: var(--accent-green); }
+    .log-err  { color: var(--accent-red); }
+    .log-info { color: var(--text-muted); }
 
-    /* RESULT */
-    .result-banner{display:none;padding:16px 20px;border-radius:var(--r);margin-top:8px;font-weight:700;font-size:15px;align-items:center;gap:12px;}
-    .result-banner.show{display:flex;}
-    .result-banner.ok{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:var(--green);}
-    .result-banner.err{background:rgba(255,64,96,.1);border:1px solid rgba(255,64,96,.3);color:var(--red);}
+    .result-banner { display: none; padding: 13px 16px; border-radius: var(--r-md); margin-top: 10px; font-weight: 700; font-size: 14px; }
+    .result-banner.show { display: flex; align-items: center; gap: 10px; }
+    .result-banner.ok  { background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3); color: var(--accent-green); }
+    .result-banner.err { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: var(--accent-red); }
 
-    .btn{padding:12px 24px;border-radius:var(--r);border:1px solid var(--line);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:900;font-size:15px;transition:.15s;width:100%;margin-top:8px;}
-    .btn:disabled{opacity:.35;cursor:not-allowed;}
-    .btn-primary{background:var(--blue);color:#fff;border-color:transparent;}
-    .btn-primary:not(:disabled):hover{filter:brightness(1.15);}
-    .btn-ghost{background:var(--s2);color:var(--muted);}
-    .btn-ghost:not(:disabled):hover{background:var(--s3);color:var(--text);}
-
-    .hint-card{background:rgba(61,139,255,.07);border:1px solid rgba(61,139,255,.2);border-radius:var(--r);padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.6;}
-    .hint-card strong{color:var(--text);}
-    .hint-steps{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
-    .hint-step{display:flex;gap:10px;align-items:flex-start;}
-    .step-num{width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+    .hint-card { background: rgba(59,130,246,.07); border: 1px solid rgba(59,130,246,.2); border-radius: var(--r-md); padding: 14px 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+    .hint-card strong { color: var(--text-primary); }
+    .hint-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .hint-step  { display: flex; gap: 10px; align-items: flex-start; }
+    .step-num   { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-blue); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
   </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">EXPEDICAO<span>/PRO</span></div>
-  <div class="topbar-right">
-    <a class="tlink" href="/">← Painel</a>
-    <a class="tlink" href="/admin">Admin Produtos</a>
-  </div>
-</div>
+<div class="erp-layout">
+  <div id="sidebar-placeholder"></div>
 
-<div class="page">
-
-  <!-- INSTRUÇÃO -->
-  <div class="hint-card">
-    <strong>Como exportar do Bling:</strong>
-    <div class="hint-steps">
-      <div class="hint-step"><div class="step-num">1</div><div>No Bling, acesse <strong>Produtos → Produtos</strong></div></div>
-      <div class="hint-step"><div class="step-num">2</div><div>Clique em <strong>Exportar → CSV</strong> (exportar todos os campos)</div></div>
-      <div class="hint-step"><div class="step-num">3</div><div>Salve o arquivo <code>.csv</code> no seu computador</div></div>
-      <div class="hint-step"><div class="step-num">4</div><div>Arraste o arquivo abaixo ou clique para selecionar — a importação é automática</div></div>
-    </div>
-  </div>
-
-  <!-- UPLOAD -->
-  <div class="card">
-    <label class="dropzone" id="dropzone" for="csvInput">
-      <input type="file" id="csvInput" accept=".csv,text/csv" />
-      <div class="dz-icon" id="dzIcon">📄</div>
-      <div class="dz-title" id="dzTitle">Arraste o CSV do Bling aqui</div>
-      <div class="dz-sub" id="dzSub">ou clique para selecionar o arquivo exportado do Bling</div>
-      <div class="dz-file-name" id="dzFileName"></div>
-    </label>
-
-    <!-- PREVIEW DO CSV -->
-    <div class="preview-card" id="previewCard" style="margin-top:16px;">
-      <div class="preview-title">Prévia do arquivo</div>
-      <div class="stats-grid" id="statsGrid"></div>
-      <div class="sample-title">Primeiros produtos detectados:</div>
-      <div style="overflow-x:auto;">
-        <table class="sample-table" id="sampleTable">
-          <thead><tr>
-            <th>SKU</th><th>Nome</th><th>L×A×P (cm)</th><th>Peso (kg)</th><th>Estoque</th>
-          </tr></thead>
-          <tbody id="sampleBody"></tbody>
-        </table>
+  <main class="erp-main">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">⬆️ Importar Produtos</h1>
+        <p class="page-subtitle">Importe o CSV do Bling para atualizar dimensões, peso e estoque</p>
       </div>
     </div>
 
-    <!-- PROGRESS -->
-    <div class="progress-wrap" id="progressWrap" style="margin-top:16px;">
-      <div class="progress-label">
-        <span id="progressText">Preparando…</span>
-        <span id="progressPct">0%</span>
+    <div class="page-content" style="max-width:780px;">
+
+      <div class="hint-card">
+        <strong>Como exportar do Bling:</strong>
+        <div class="hint-steps">
+          <div class="hint-step"><div class="step-num">1</div><div>No Bling, acesse <strong>Produtos → Produtos</strong></div></div>
+          <div class="hint-step"><div class="step-num">2</div><div>Clique em <strong>Exportar → CSV</strong> (exportar todos os campos)</div></div>
+          <div class="hint-step"><div class="step-num">3</div><div>Salve o arquivo <code>.csv</code> no seu computador</div></div>
+          <div class="hint-step"><div class="step-num">4</div><div>Arraste abaixo ou clique para selecionar — a importação é automática</div></div>
+        </div>
       </div>
-      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
+
+      <div class="card">
+        <label class="dropzone" id="dropzone" for="csvInput">
+          <input type="file" id="csvInput" accept=".csv,text/csv" />
+          <div class="dz-icon" id="dzIcon">📄</div>
+          <div class="dz-title" id="dzTitle">Arraste o CSV do Bling aqui</div>
+          <div class="dz-sub" id="dzSub">ou clique para selecionar o arquivo exportado do Bling</div>
+          <div class="dz-file-name" id="dzFileName"></div>
+        </label>
+
+        <div class="preview-card" id="previewCard" style="margin-top:16px;">
+          <div class="preview-title">Prévia do arquivo</div>
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="sample-title">Primeiros produtos detectados:</div>
+          <div style="overflow-x:auto;">
+            <table class="sample-table">
+              <thead><tr><th>SKU</th><th>Nome</th><th>L×A×P (cm)</th><th>Peso (kg)</th><th>Estoque</th></tr></thead>
+              <tbody id="sampleBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-label">
+            <span id="progressText">Preparando…</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
+        </div>
+
+        <div class="log-area" id="logArea"></div>
+        <div class="result-banner" id="resultBanner"></div>
+
+        <div style="margin-top:14px;display:flex;gap:10px;flex-direction:column;">
+          <button class="btn btn-primary" id="btnImport" disabled onclick="startImport()" style="width:100%;padding:12px;">
+            Selecione um arquivo para importar
+          </button>
+          <button class="btn btn-ghost" id="btnReset" style="display:none;width:100%;" onclick="resetAll()">
+            Importar outro arquivo
+          </button>
+        </div>
+      </div>
+
     </div>
-
-    <!-- LOG -->
-    <div class="log-area" id="logArea" style="margin-top:12px;"></div>
-
-    <!-- RESULTADO -->
-    <div class="result-banner" id="resultBanner"></div>
-
-    <!-- BOTÃO -->
-    <button class="btn btn-primary" id="btnImport" disabled onclick="startImport()">
-      Selecione um arquivo para importar
-    </button>
-    <button class="btn btn-ghost" id="btnReset" style="display:none;margin-top:8px;" onclick="resetAll()">
-      Importar outro arquivo
-    </button>
-  </div>
-
+  </main>
 </div>
 
+<div class="toast" id="toast"></div>
+
+<script src="/menu.js"></script>
 <script>
 'use strict';
-
-// ── FIREBASE CONFIG ──
-// Lê do servidor via rota /firebase-config
-// O server.js precisa expor esta rota (adicionar conforme instruções)
-// Por enquanto usamos a API /import/products diretamente
 
 const TERMINAL_KEY = 'expedicao_pro_terminal_id';
 function tid(){let id=localStorage.getItem(TERMINAL_KEY);if(!id){id=crypto.randomUUID();localStorage.setItem(TERMINAL_KEY,id);}return id;}
 
 async function api(path, opts={}){
   const token = localStorage.getItem('expedicao_token')||'';
-  const res = await fetch(path,{
-    ...opts,
-    headers:{'content-type':'application/json','x-terminal-id':tid(),'authorization':`Bearer ${token}`,...(opts.headers||{})}
-  });
+  const res = await fetch(path,{...opts,headers:{'content-type':'application/json','x-terminal-id':tid(),'authorization':`Bearer ${token}`,...(opts.headers||{})}});
   const d = await res.json().catch(()=>({}));
   if(res.status===401){window.location.href='/login';return null;}
   if(!res.ok) throw new Error(d.error||`HTTP ${res.status}`);
@@ -204,287 +167,151 @@ async function api(path, opts={}){
 
 function esc(s){return(s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);}
 
-// ── STATE ──
-let parsedProducts = [];
-let importing = false;
+let parsedProducts = [], importing = false;
 
-// ── DRAG & DROP ──
 const dropzone = document.getElementById('dropzone');
 const csvInput = document.getElementById('csvInput');
+dropzone.addEventListener('dragover', e=>{e.preventDefault();dropzone.classList.add('drag-over');});
+dropzone.addEventListener('dragleave',()=>dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('drag-over');const f=e.dataTransfer?.files?.[0];if(f)handleFile(f);});
+csvInput.addEventListener('change',()=>{if(csvInput.files?.[0])handleFile(csvInput.files[0]);});
 
-dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
-dropzone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropzone.classList.remove('drag-over');
-  const file = e.dataTransfer?.files?.[0];
-  if (file) handleFile(file);
-});
-csvInput.addEventListener('change', () => {
-  if (csvInput.files?.[0]) handleFile(csvInput.files[0]);
-});
-
-// ── PARSE CSV ──
-function handleFile(file) {
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    alert('Selecione um arquivo .csv exportado do Bling.');
-    return;
-  }
-
-  document.getElementById('dzIcon').textContent = '✅';
-  document.getElementById('dzTitle').textContent = 'Arquivo carregado!';
-  document.getElementById('dzSub').textContent = '';
-  document.getElementById('dzFileName').textContent = file.name;
+function handleFile(file){
+  if(!file.name.toLowerCase().endsWith('.csv')){alert('Selecione um arquivo .csv exportado do Bling.');return;}
+  document.getElementById('dzIcon').textContent='✅';
+  document.getElementById('dzTitle').textContent='Arquivo carregado!';
+  document.getElementById('dzSub').textContent='';
+  document.getElementById('dzFileName').textContent=file.name;
   dropzone.classList.add('has-file');
-
-  const reader = new FileReader();
-  reader.onload = e => parseCSV(e.target.result, file.name);
-  reader.readAsText(file, 'utf-8');
+  const reader=new FileReader();
+  reader.onload=e=>parseCSV(e.target.result,file.name);
+  reader.readAsText(file,'utf-8');
 }
 
-function parseCSV(text, fileName) {
-  // Remove BOM se presente
-  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-
-  // Detecta delimitador
-  const firstLine = text.split(/\r?\n/)[0] || '';
-  const delim = [';',',','\t'].map(d => ({ d, n: (firstLine.match(new RegExp('\\'+d,'g'))||[]).length }))
-    .sort((a,b)=>b.n-a.n)[0].d;
-
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) { logErr('Arquivo vazio ou inválido.'); return; }
-
-  // Parse cabeçalho
-  const headers = splitCSVLine(lines[0], delim).map(h => h.trim().replace(/^"|"$/g,''));
-
-  // Mapeamento de campos
-  const fieldMap = {
-    sku:         find(headers, ['Código','Codigo','sku','SKU']),
-    name:        find(headers, ['Descrição','Descricao','Nome','name']),
-    bin:         find(headers, ['Localização','Localizacao','Local','bin']),
-    ean:         find(headers, ['GTIN/EAN','EAN','GTIN']),
-    eanBox:      find(headers, ['GTIN/EAN da Embalagem','EAN da Embalagem']),
-    images:      find(headers, ['URL Imagens Externas','URL de Imagens Externas','Imagens']),
-    weight:      find(headers, ['Peso líquido (Kg)','Peso liquido (Kg)','Peso Liquido']),
-    weightBruto: find(headers, ['Peso bruto (Kg)','Peso Bruto (Kg)','Peso Bruto']),
-    width:       find(headers, ['Largura do produto','Largura']),
-    height:      find(headers, ['Altura do Produto','Altura do produto','Altura']),
-    depth:       find(headers, ['Profundidade do produto','Profundidade']),
-    stock:       find(headers, ['Estoque','estoque','Saldo em Estoque']),
-    itensPorCaixa: find(headers, ['Itens p/ caixa','Itens por caixa']),
-    preco:       find(headers, ['Preço','Preco']),
-    precoCusto:  find(headers, ['Preço de custo','Preco de custo']),
-    situacao:    find(headers, ['Situação','Situacao']),
-    marca:       find(headers, ['Marca','marca']),
+function parseCSV(text,fileName){
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  const firstLine=text.split(/\r?\n/)[0]||'';
+  const delim=[';',',','\t'].map(d=>({d,n:(firstLine.match(new RegExp('\\'+d,'g'))||[]).length})).sort((a,b)=>b.n-a.n)[0].d;
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2){return;}
+  const headers=splitLine(lines[0],delim).map(h=>h.trim().replace(/^"|"$/g,''));
+  const fm={
+    sku:find(headers,['Código','Codigo','sku','SKU']),
+    name:find(headers,['Descrição','Descricao','Nome','name']),
+    bin:find(headers,['Localização','Localizacao','Local','bin']),
+    ean:find(headers,['GTIN/EAN','EAN','GTIN']),
+    eanBox:find(headers,['GTIN/EAN da Embalagem','EAN da Embalagem']),
+    images:find(headers,['URL Imagens Externas','URL de Imagens Externas']),
+    weight:find(headers,['Peso líquido (Kg)','Peso liquido (Kg)']),
+    weightBruto:find(headers,['Peso bruto (Kg)','Peso Bruto (Kg)']),
+    width:find(headers,['Largura do produto','Largura']),
+    height:find(headers,['Altura do Produto','Altura do produto','Altura']),
+    depth:find(headers,['Profundidade do produto','Profundidade']),
+    stock:find(headers,['Estoque','estoque']),
+    itensPorCaixa:find(headers,['Itens p/ caixa','Itens por caixa']),
+    preco:find(headers,['Preço','Preco']),
+    precoCusto:find(headers,['Preço de custo','Preco de custo']),
+    situacao:find(headers,['Situação','Situacao']),
+    marca:find(headers,['Marca','marca']),
+    tagsRaw:find(headers,['Grupo de Tags/Tags','Tags']),
   };
-
-  // Parse linhas
-  parsedProducts = [];
-  let semDim = 0;
-
-  for (let i = 1; i < lines.length; i++) {
-    const vals = splitCSVLine(lines[i], delim).map(v => v.trim().replace(/^"|"$/g,'').trim());
-    const get  = key => fieldMap[key] !== -1 ? (vals[fieldMap[key]] || '') : '';
-
-    const sku  = get('sku').trim();
-    const name = get('name').trim();
-    // Rejeita SKUs inválidos: CSS, HTML, espaços, muito longos
-    if (!sku || !name) continue;
-    if (sku.length > 60) continue;
-    if (sku.includes(' ') || sku.includes(':') || sku.includes(';') || sku.includes('<') || sku.includes('>')) continue;
-    if (sku.includes('margin') || sku.includes('color') || sku.includes('font') || sku.includes('padding')) continue;
-    if (!/^[A-Za-z0-9_\-\.]+$/.test(sku)) continue;
-
-    const w = parseNum(get('width'));
-    const h = parseNum(get('height'));
-    const d = parseNum(get('depth'));
-    if (!w && !h) semDim++;
-
-    parsedProducts.push({
-      sku, name,
-      bin:          get('bin'),
-      ean:          get('ean'),
-      eanBox:       get('eanBox'),
-      images:       parseImages(get('images')),
-      weight:       parseNum(get('weight')),
-      weightBruto:  parseNum(get('weightBruto')),
-      width:        w,
-      height:       h,
-      depth:        d,
-      stock:        parseNum(get('stock')),
-      itensPorCaixa:parseNum(get('itensPorCaixa')),
-      preco:        parseNum(get('preco')),
-      precoCusto:   parseNum(get('precoCusto')),
-      situacao:     get('situacao'),
-      marca:        get('marca'),
-    });
+  parsedProducts=[];let semDim=0;
+  for(let i=1;i<lines.length;i++){
+    const vals=splitLine(lines[i],delim).map(v=>v.trim().replace(/^"|"$/g,'').trim());
+    const get=k=>fm[k]!==-1?(vals[fm[k]]||''):'';
+    const sku=get('sku').trim(),name=get('name').trim();
+    if(!sku||!name)continue;
+    if(sku.length>60)continue;
+    if(sku.includes(' ')||sku.includes(':')||sku.includes(';')||sku.includes('<')||sku.includes('>'))continue;
+    if(!/^[A-Za-z0-9_\-.]+$/.test(sku))continue;
+    const w=pNum(get('width')),h=pNum(get('height')),d=pNum(get('depth'));
+    if(!w&&!h)semDim++;
+    parsedProducts.push({sku,name,bin:get('bin'),ean:get('ean'),eanBox:get('eanBox'),
+      images:pImgs(get('images')),weight:pNum(get('weight')),weightBruto:pNum(get('weightBruto')),
+      width:w,height:h,depth:d,stock:pNum(get('stock')),itensPorCaixa:pNum(get('itensPorCaixa')),
+      preco:pNum(get('preco')),precoCusto:pNum(get('precoCusto')),
+      situacao:get('situacao'),marca:get('marca'),tagsRaw:get('tagsRaw')});
   }
-
-  showPreview(semDim, fileName);
+  showPreview(semDim);
 }
 
-function find(headers, candidates) {
-  const norm = s => s.toLowerCase().replace(/\s+/g,'').replace(/[()\/]/g,'');
-  for (const c of candidates) {
-    const idx = headers.findIndex(h => norm(h) === norm(c));
-    if (idx !== -1) return idx;
-  }
-  return -1;
-}
+function find(h,c){const n=s=>s.toLowerCase().replace(/\s+/g,'').replace(/[()\/]/g,'');for(const x of c){const i=h.findIndex(k=>n(k)===n(x));if(i!==-1)return i;}return -1;}
+function pNum(r){const s=(r||'').toString().trim().replace(',','.');if(!s||s==='0'||s==='0.00')return null;const n=parseFloat(s);return isNaN(n)?null:n;}
+function pImgs(r){return(r||'').split('|').map(s=>s.trim().replace(/\s/g,'')).filter(u=>/^https?:\/\//i.test(u)).slice(0,10);}
+function splitLine(line,d){const r=[];let c='',q=false;for(let i=0;i<line.length;i++){const x=line[i];if(x==='"'){q=!q;}else if(x===d&&!q){r.push(c);c='';}else{c+=x;}}r.push(c);return r;}
 
-function parseNum(raw) {
-  const s = (raw||'').toString().trim().replace(',','.');
-  if (!s || s === '0' || s === '0.00') return null;
-  const n = parseFloat(s);
-  return isNaN(n) ? null : n;
-}
-
-function parseImages(raw) {
-  return (raw||'').split('|').map(s=>s.trim().replace(/\s/g,'')).filter(u=>/^https?:\/\//i.test(u)).slice(0,10);
-}
-
-function splitCSVLine(line, delim) {
-  const result = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') { inQ = !inQ; }
-    else if (c === delim && !inQ) { result.push(cur); cur = ''; }
-    else { cur += c; }
-  }
-  result.push(cur);
-  return result;
-}
-
-// ── PREVIEW ──
-function showPreview(semDim, fileName) {
-  const total   = parsedProducts.length;
-  const comDim  = total - semDim;
-  const comFoto = parsedProducts.filter(p => p.images.length > 0).length;
-
-  // Stats
-  document.getElementById('statsGrid').innerHTML = `
+function showPreview(semDim){
+  const total=parsedProducts.length,comDim=total-semDim;
+  document.getElementById('statsGrid').innerHTML=`
     <div class="stat-box"><div class="stat-num green">${total}</div><div class="stat-label">Produtos</div></div>
     <div class="stat-box"><div class="stat-num blue">${comDim}</div><div class="stat-label">Com dimensões</div></div>
-    <div class="stat-box"><div class="stat-num ${semDim > 0 ? 'warn':'muted'}">${semDim}</div><div class="stat-label">Sem dimensões</div></div>
-    <div class="stat-box"><div class="stat-num muted">${comFoto}</div><div class="stat-label">Com foto ML</div></div>
+    <div class="stat-box"><div class="stat-num ${semDim>0?'warn':'muted'}">${semDim}</div><div class="stat-label">Sem dimensões</div></div>
+    <div class="stat-box"><div class="stat-num muted">${parsedProducts.filter(p=>p.images.length>0).length}</div><div class="stat-label">Com foto ML</div></div>
   `;
-
-  // Sample table (primeiros 8)
-  const body = document.getElementById('sampleBody');
-  body.innerHTML = '';
-  parsedProducts.slice(0, 8).forEach(p => {
-    const dims = [p.width, p.height, p.depth].filter(Boolean);
-    const dimsStr = dims.length ? dims.join('×') : '—';
-    const weightStr = p.weight ? `${p.weight}` : '—';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${esc(p.sku)}</td>
-      <td class="td-name">${esc(p.name)}</td>
-      <td class="${dims.length ? 'td-dim' : 'td-empty'}">${esc(dimsStr)}</td>
-      <td class="${p.weight ? 'td-dim' : 'td-empty'}">${esc(weightStr)}</td>
-      <td class="${p.stock ? '' : 'td-empty'}">${p.stock ?? '—'}</td>
-    `;
+  const body=document.getElementById('sampleBody');body.innerHTML='';
+  parsedProducts.slice(0,8).forEach(p=>{
+    const dims=[p.width,p.height,p.depth].filter(Boolean);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(p.sku)}</td><td class="td-name">${esc(p.name)}</td><td class="${dims.length?'td-dim':'td-empty'}">${dims.length?dims.join('×'):'—'}</td><td class="${p.weight?'td-dim':'td-empty'}">${p.weight??'—'}</td><td class="${p.stock?'':'td-empty'}">${p.stock??'—'}</td>`;
     body.appendChild(tr);
   });
-
   document.getElementById('previewCard').classList.add('show');
-
-  const btn = document.getElementById('btnImport');
-  btn.disabled = false;
-  btn.textContent = `⬆ Importar ${total} produtos para o Firestore`;
+  const btn=document.getElementById('btnImport');
+  btn.disabled=false;btn.textContent=`⬆ Importar ${total} produtos para o Firestore`;
 }
 
-// ── IMPORT ──
-async function startImport() {
-  if (!parsedProducts.length || importing) return;
-  importing = true;
-
-  document.getElementById('btnImport').disabled = true;
-  document.getElementById('btnImport').textContent = 'Importando…';
+async function startImport(){
+  if(!parsedProducts.length||importing)return;
+  importing=true;
+  document.getElementById('btnImport').disabled=true;
+  document.getElementById('btnImport').textContent='Importando…';
   document.getElementById('progressWrap').classList.add('show');
   document.getElementById('logArea').classList.add('show');
-  document.getElementById('logArea').innerHTML = '';
-
-  const CHUNK = 50; // 50 produtos por requisição
-  const total = parsedProducts.length;
-  let done = 0;
-  let errors = 0;
-
-  log(`Iniciando importação de ${total} produtos…`, 'info');
-
-  for (let i = 0; i < parsedProducts.length; i += CHUNK) {
-    const chunk = parsedProducts.slice(i, i + CHUNK);
-    const pct   = Math.round((done / total) * 100);
-    updateProgress(`Gravando ${done + 1}–${Math.min(done + CHUNK, total)} de ${total}…`, pct);
-
-    try {
-      const r = await api('/import/products', {
-        method: 'POST',
-        body: JSON.stringify({ products: chunk })
-      });
-      done += chunk.length;
-      log(`✓ ${done}/${total} produtos gravados`, 'ok');
-    } catch(e) {
-      errors++;
-      log(`✗ Erro no lote ${i}–${i+CHUNK}: ${e.message}`, 'err');
-    }
+  document.getElementById('logArea').innerHTML='';
+  const CHUNK=50,total=parsedProducts.length;let done=0,errors=0;
+  log(`Iniciando importação de ${total} produtos…`,'info');
+  for(let i=0;i<parsedProducts.length;i+=CHUNK){
+    const chunk=parsedProducts.slice(i,i+CHUNK);
+    const pct=Math.round((done/total)*100);
+    document.getElementById('progressText').textContent=`Gravando ${done+1}–${Math.min(done+CHUNK,total)} de ${total}…`;
+    document.getElementById('progressPct').textContent=`${pct}%`;
+    document.getElementById('progressBar').style.width=`${pct}%`;
+    try{const r=await api('/import/products',{method:'POST',body:JSON.stringify({products:chunk})});done+=chunk.length;log(`✓ ${done}/${total} produtos gravados`,'ok');}
+    catch(e){errors++;log(`✗ Erro no lote ${i}–${i+CHUNK}: ${e.message}`,'err');}
   }
-
-  updateProgress('Concluído!', 100);
-
-  const banner = document.getElementById('resultBanner');
-  if (errors === 0) {
-    banner.className = 'result-banner ok show';
-    banner.innerHTML = `✅ ${done} produtos importados com sucesso! Dimensões, peso e estoque atualizados.`;
-    log(`\n✅ Importação concluída! ${done} produtos no Firestore.`, 'ok');
-  } else {
-    banner.className = 'result-banner err show';
-    banner.innerHTML = `⚠️ ${done} importados, ${errors} lote(s) com erro. Verifique o log.`;
-  }
-
-  document.getElementById('btnReset').style.display = 'block';
-  document.getElementById('btnImport').style.display = 'none';
-  importing = false;
+  document.getElementById('progressText').textContent='Concluído!';
+  document.getElementById('progressPct').textContent='100%';
+  document.getElementById('progressBar').style.width='100%';
+  const banner=document.getElementById('resultBanner');
+  if(errors===0){banner.className='result-banner ok show';banner.innerHTML=`✅ ${done} produtos importados com sucesso!`;log(`\n✅ Importação concluída! ${done} produtos no Firestore.`,'ok');}
+  else{banner.className='result-banner err show';banner.innerHTML=`⚠️ ${done} importados, ${errors} lote(s) com erro.`;}
+  document.getElementById('btnReset').style.display='block';
+  document.getElementById('btnImport').style.display='none';
+  importing=false;
 }
 
-function updateProgress(text, pct) {
-  document.getElementById('progressText').textContent = text;
-  document.getElementById('progressPct').textContent  = `${pct}%`;
-  document.getElementById('progressBar').style.width  = `${pct}%`;
-}
+function log(msg,type='info'){const a=document.getElementById('logArea');const d=document.createElement('div');d.className=`log-${type}`;d.textContent=`[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`;a.appendChild(d);a.scrollTop=a.scrollHeight;}
 
-function log(msg, type='info') {
-  const area = document.getElementById('logArea');
-  const div  = document.createElement('div');
-  div.className = `log-${type}`;
-  div.textContent = `[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`;
-  area.appendChild(div);
-  area.scrollTop = area.scrollHeight;
-}
-
-function resetAll() {
-  parsedProducts = [];
-  importing = false;
-  document.getElementById('dzIcon').textContent    = '📄';
-  document.getElementById('dzTitle').textContent   = 'Arraste o CSV do Bling aqui';
-  document.getElementById('dzSub').textContent     = 'ou clique para selecionar o arquivo exportado do Bling';
-  document.getElementById('dzFileName').textContent= '';
-  document.getElementById('csvInput').value        = '';
+function resetAll(){
+  parsedProducts=[];importing=false;
+  document.getElementById('dzIcon').textContent='📄';
+  document.getElementById('dzTitle').textContent='Arraste o CSV do Bling aqui';
+  document.getElementById('dzSub').textContent='ou clique para selecionar';
+  document.getElementById('dzFileName').textContent='';
+  document.getElementById('csvInput').value='';
   dropzone.classList.remove('has-file','drag-over');
   document.getElementById('previewCard').classList.remove('show');
   document.getElementById('progressWrap').classList.remove('show');
   document.getElementById('logArea').classList.remove('show');
-  document.getElementById('logArea').innerHTML = '';
-  document.getElementById('resultBanner').className = 'result-banner';
-  document.getElementById('btnImport').style.display = 'block';
-  document.getElementById('btnImport').disabled   = true;
-  document.getElementById('btnImport').textContent= 'Selecione um arquivo para importar';
-  document.getElementById('btnReset').style.display  = 'none';
+  document.getElementById('logArea').innerHTML='';
+  document.getElementById('resultBanner').className='result-banner';
+  document.getElementById('btnImport').style.display='block';
+  document.getElementById('btnImport').disabled=true;
+  document.getElementById('btnImport').textContent='Selecione um arquivo para importar';
+  document.getElementById('btnReset').style.display='none';
 }
 
-window.startImport = startImport;
-window.resetAll    = resetAll;
+window.startImport=startImport;window.resetAll=resetAll;
 </script>
 </body>
 </html>
