@@ -329,11 +329,16 @@ function renderPedidoCard(p){
     <div class="pedido-card${jaClon?' clonado':''}" id="card-${p.id}">
       <div class="pedido-hdr" onclick="toggleItens(${p.id})">
         <div class="pedido-hdr-left">
-          <div>
-            <div class="pedido-numero">#${esc(String(p.numeroPedido||p.numero||p.id))}</div>
+          <div style="flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div class="pedido-numero">NF ${esc(String(p.numero||''))}</div>
+              ${p.numeroPedido && p.numeroPedido !== String(p.numero)
+                ? `<span style="font-size:10px;color:var(--text-muted);">→ pedido #${esc(String(p.numeroPedido))}</span>`
+                : ''}
+            </div>
             <div class="pedido-sub">${esc(p.dataEmissao||'')} · ${esc(p.situacao||'')}</div>
           </div>
-          <div style="flex:1;min-width:0;">
+          <div style="flex:1;min-width:0;padding-left:12px;">
             <div class="pedido-cliente">${esc(p.cliente?.nome||'Cliente')}</div>
             <div class="pedido-sub">${(p.itens||[]).length} item(s)</div>
           </div>
@@ -382,7 +387,13 @@ window.clonarPedido = async function(id){
         blingPedidoId: pedido.id,
         numeroPedido:  String(pedido.numeroPedido || pedido.numero || pedido.id),
         marketplace:   pedido.marketplace,
-        clienteNome:   `${pedido.cliente?.nome || ''} #${pedido.numeroPedido || pedido.numero}`.trim(),
+        clienteNome:   (() => {
+          const nome = pedido.cliente?.nome || '';
+          const num  = pedido.numeroPedido || pedido.numero || '';
+          // Se tem numeroPedido diferente do numero da NF, inclui no nome
+          if (num && num !== String(pedido.numero)) return `${nome} [#${num}]`.trim();
+          return nome.trim();
+        })(),
         itens:         pedido.itens,
       })
     });
