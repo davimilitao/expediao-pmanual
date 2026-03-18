@@ -1304,6 +1304,10 @@ app.get('/bling/pedidos', async (req, res, next) => {
       detalhado:   false,
     }));
 
+    // LOG: mostra IDs internos do Bling para diagnóstico
+    if (items.length > 0) {
+      console.log('[bling/pedidos] IDs internos:', items.slice(0,3).map(i => `NF${i.numero}=id:${i.id}`).join(', '));
+    }
     res.json({ items, total: items.length, data });
   } catch(err) {
     if (err.message === 'bling_not_authorized') return res.status(401).json({ error: 'bling_not_authorized' });
@@ -1319,6 +1323,13 @@ app.get('/bling/pedidos/:id', async (req, res, next) => {
     const resp = await blingFetch(`/nfe/${req.params.id}`);
     const n    = resp.data || resp;
 
+    // LOG para diagnóstico — mostra estrutura real dos itens no Railway
+    if (n.itens && n.itens.length > 0) {
+      console.log(`[bling/nfe/${req.params.id}] primeiro item:`, JSON.stringify(n.itens[0], null, 2));
+    } else {
+      console.log(`[bling/nfe/${req.params.id}] SEM ITENS. Campos disponíveis:`, Object.keys(n));
+    }
+
     const item = {
       id:           n.id,
       numero:       n.numero,
@@ -1329,12 +1340,12 @@ app.get('/bling/pedidos/:id', async (req, res, next) => {
       marketplace:  detectarMkt(n),
       valorTotal:   n.valorTotal || n.totalProdutos || 0,
       detalhado:    true,
-      itens: (n.itens || []).map(it => ({
-        // Bling v3 NF: campos diretos no item
-        sku:   safeTrim(it.codigo || it.produto?.codigo || ''),
-        nome:  safeTrim(it.descricao || it.produto?.descricao || ''),
-        qty:   Number(it.quantidade ?? it.qty ?? 1),
-        preco: Number(it.valor ?? it.valorUnitario ?? 0),
+      // Tenta todos os campos possíveis onde o Bling pode colocar os itens
+      itens: (n.itens || n.produtos || n.items || []).map(it => ({
+        sku:   safeTrim(it.codigo || it.sku || it.produto?.codigo || it.codigoProduto || ''),
+        nome:  safeTrim(it.descricao || it.nome || it.produto?.descricao || it.nomeProduto || ''),
+        qty:   Number(it.quantidade || it.qty || it.qtd || 1),
+        preco: Number(it.valor || it.valorUnitario || it.preco || 0),
       })),
     };
 
@@ -1348,14 +1359,22 @@ app.get('/bling/pedidos/:id', async (req, res, next) => {
 
 
 // ── DEBUG: ver resposta bruta da API do Bling ────────────────────
-// GET /bling/debug/nfe/:id  — remover em produção após diagnóstico
+// GET /bling/debug/nfe/:id  (usar id interno do Bling, não o numero da NF)
+// GET /bling/debug/lista?data=2026-03-17  (ver listagem com IDs reais)
 app.get('/bling/debug/nfe/:id', async (req, res, next) => {
   try {
     const raw = await blingFetch(`/nfe/${req.params.id}`);
-    res.json(raw); // retorna tudo como veio do Bling
-  } catch(err) {
-    next(err);
-  }
+    res.json(raw);
+  } catch(err) { next(err); }
+});
+app.get('/bling/debug/lista', async (req, res, next) => {
+  try {
+    const data = req.query.data || new Date().toISOString().split('T')[0];
+    const raw  = await blingFetch(`/nfe?dataEmissaoInicial=${data}&dataEmissaoFinal=${data}&situacao=100&pagina=1&limite=5`);
+    // Retorna só id e numero para fácil leitura
+    const resumo = (raw.data||[]).map(n => ({ id: n.id, numero: n.numero, contato: n.contato?.nome }));
+    res.json({ resumo, raw_primeiro: raw.data?.[0] || null });
+  } catch(err) { next(err); }
 });
 
 // ── CLONAR NF → CRIAR PEDIDO ─────────────────────────────────────
@@ -1443,7 +1462,6 @@ app.post('/bling/clonar', async (req, res, next) => {
     next(err);
   }
 });
-
 
 
 // ---------------- Errors ----------------
