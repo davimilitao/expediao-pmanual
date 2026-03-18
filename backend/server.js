@@ -89,7 +89,7 @@ app.get('/importar', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'importar.
 app.get('/catalogo', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'catalogo.html')));
 app.get('/compras', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'compras.html')));
 app.get('/financas', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'financas.html')));
-app.get('/bling', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'bling.html')));
+app.get('/bling',   (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'bling.html')));
 
 // ✅ uploads locais (fotos reais do estoque)
 const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads');
@@ -1167,6 +1167,9 @@ app.post('/api/despesas', async (req, res, next) => {
 });
 
 // ================================================================
+// BLING INTEGRATION
+// ================================================================
+// ================================================================
 // BLING MODULE — colar no server.js ANTES de "// ---------------- Errors"
 // ================================================================
 
@@ -1280,13 +1283,14 @@ app.get('/bling/pedidos', async (req, res, next) => {
     const data   = req.query.data || new Date().toISOString().split('T')[0];
     const pagina = Number(req.query.pagina || 1);
 
-    // situacao=100 = Autorizada | 101 = Cancelada | omitir para todas
     const params = new URLSearchParams({
       dataEmissaoInicial: data,
       dataEmissaoFinal:   data,
       pagina,
       limite: 100,
     });
+    // Nota: não filtrar por 'situacao' — o Bling rejeita valores inválidos
+    // Filtramos no frontend mostrando a situação de cada NF
 
     const resp  = await blingFetch(`/nfe?${params}`);
     const notas = resp.data || [];
@@ -1370,7 +1374,7 @@ app.get('/bling/debug/nfe/:id', async (req, res, next) => {
 app.get('/bling/debug/lista', async (req, res, next) => {
   try {
     const data = req.query.data || new Date().toISOString().split('T')[0];
-    const raw  = await blingFetch(`/nfe?dataEmissaoInicial=${data}&dataEmissaoFinal=${data}&situacao=100&pagina=1&limite=5`);
+    const raw  = await blingFetch(`/nfe?dataEmissaoInicial=${data}&dataEmissaoFinal=${data}&pagina=1&limite=5`);
     // Retorna só id e numero para fácil leitura
     const resumo = (raw.data||[]).map(n => ({ id: n.id, numero: n.numero, contato: n.contato?.nome }));
     res.json({ resumo, raw_primeiro: raw.data?.[0] || null });
