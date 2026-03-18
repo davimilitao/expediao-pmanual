@@ -1275,85 +1275,68 @@ app.post('/bling/disconnect', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- LISTAR NFs DO DIA (BLING v3) ---
+// ── LISTAR PEDIDOS DE VENDA DO DIA (O Espelho Correto) ──
 app.get('/bling/pedidos', async (req, res, next) => {
   try {
-    // Garante que a data está no formato YYYY-MM-DD (ex: 2026-03-17)
+    // Pega a data YYYY-MM-DD
     const dataRaw = req.query.data || new Date().toISOString().split('T')[0];
-    
-    // Removido o filtro 'situacao' para evitar erro de parâmetro inválido
+
+    // No Bling v3, a busca de pedidos usa dataInicial e dataFinal
     const params = new URLSearchParams({
-      dataEmissaoInicial: dataRaw,
-      dataEmissaoFinal:   dataRaw,
+      dataInicial: dataRaw,
+      dataFinal:   dataRaw,
       pagina: Number(req.query.pagina || 1),
       limite: 100
     });
 
-    console.log(`[Bling] Buscando NFe para a data: ${dataRaw}`);
-    const resp = await blingFetch(`/nfe?${params}`);
-    
-    // Se vier vazio, o log mostrará a estrutura recebida
-    if (!resp.data || resp.data.length === 0) {
-      console.log('[Bling] Resposta sem dados:', JSON.stringify(resp));
-    }
+    console.log(`[Bling] Buscando Pedidos de Venda para: ${dataRaw}`);
+    const resp = await blingFetch(`/pedidos/vendas?${params}`);
 
-    const items = (resp.data || []).map(n => ({
-      id: n.id,
-      numero: n.numero,
-      dataEmissao: n.dataEmissao,
-      situacao: n.situacao?.descricao || 'N/A',
-      cliente: { nome: n.contato?.nome || 'Cliente não identificado' },
-      valorTotal: n.valorTotal || 0,
-      itens: []
+    const items = (resp.data || []).map(p => ({
+      id: p.id,
+      numero: p.numero,
+      dataEmissao: p.data,
+      situacao: p.situacao?.valor || 'N/A', // Em aberto, Atendido, etc
+      cliente: { nome: p.contato?.nome || 'Cliente não identificado' },
+      marketplace: p.loja?.id ? 'Integrado' : 'Manual',
+      valorTotal: p.total || 0,
+      itens: [] // Vazio de propósito, a tela vai buscar depois!
     }));
 
     res.json({ items, total: items.length, data: dataRaw });
   } catch(err) {
     console.error('[GET /bling/pedidos] Erro:', err.message);
-    res.status(500).json({ error: err.message, raw: err.rawResponse || null });
+    res.status(500).json({ error: err.message });
   }
 });
-// ── DETALHES DE UMA NF (com itens) ───────────────────────────────
-// GET /bling/pedidos/:id
+
+// ── DETALHES DE UM PEDIDO DE VENDA (Buscando os itens) ──
 app.get('/bling/pedidos/:id', async (req, res, next) => {
   try {
-    const resp = await blingFetch(`/nfe/${req.params.id}`);
-    const n    = resp.data || resp;
-
-    // LOG para diagnóstico — mostra estrutura real dos itens no Railway
-    if (n.itens && n.itens.length > 0) {
-      console.log(`[bling/nfe/${req.params.id}] primeiro item:`, JSON.stringify(n.itens[0], null, 2));
-    } else {
-      console.log(`[bling/nfe/${req.params.id}] SEM ITENS. Campos disponíveis:`, Object.keys(n));
-    }
+    const resp = await blingFetch(`/pedidos/vendas/${req.params.id}`);
+    const p = resp.data || resp;
 
     const item = {
-      id:           n.id,
-      numero:       n.numero,
-      numeroPedido: n.numeroPedidoLoja || n.numeroPedido || null,
-      dataEmissao:  n.dataEmissao,
-      situacao:     n.situacao?.descricao || '',
-      cliente:      { nome: n.contato?.nome || '', email: n.contato?.email || '' },
-      marketplace:  detectarMkt(n),
-      valorTotal:   n.valorTotal || n.totalProdutos || 0,
-      detalhado:    true,
-      // Tenta todos os campos possíveis onde o Bling pode colocar os itens
-      itens: (n.itens || n.produtos || n.items || []).map(it => ({
-        sku:   safeTrim(it.codigo || it.sku || it.produto?.codigo || it.codigoProduto || ''),
-        nome:  safeTrim(it.descricao || it.nome || it.produto?.descricao || it.nomeProduto || ''),
-        qty:   Number(it.quantidade || it.qty || it.qtd || 1),
-        preco: Number(it.valor || it.valorUnitario || it.preco || 0),
-      })),
+      id: p.id,
+      numero: p.numero,
+      situacao: p.situacao?.valor || '',
+      cliente: { nome: p.contato?.nome || '' },
+      valorTotal: p.total || 0,
+      // Mapeando os itens do Pedido de Venda no Bling v3
+      itens: (p.itens || []).map(it => ({
+        sku: it.produto?.codigo || '',
+        nome: it.descricao || '',
+        qty: Number(it.quantidade || 1),
+        preco: Number(it.valor || 0)
+      }))
     };
 
     res.json({ item });
   } catch(err) {
-    if (err.message === 'bling_not_authorized') return res.status(401).json({ error: 'bling_not_authorized' });
-    console.error('[GET /bling/pedidos/:id]', err);
-    next(err);
+    console.error('[GET /bling/pedidos/:id]', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
-
 
 // ── DEBUG: ver resposta bruta da API do Bling ────────────────────
 // GET /bling/debug/nfe/:id  (usar id interno do Bling, não o numero da NF)
