@@ -1283,16 +1283,20 @@ app.get('/bling/pedidos', async (req, res, next) => {
     const data   = req.query.data || new Date().toISOString().split('T')[0];
     const pagina = Number(req.query.pagina || 1);
 
+    // Bling v3 usa dd/mm/yyyy, não yyyy-mm-dd
+    const [y, m, d] = data.split('-');
+    const dataBling = `${d}/${m}/${y}`;
+
     const params = new URLSearchParams({
-      dataEmissaoInicial: data,
-      dataEmissaoFinal:   data,
+      dataEmissaoInicial: dataBling,
+      dataEmissaoFinal:   dataBling,
       pagina,
       limite: 100,
     });
-    // Nota: não filtrar por 'situacao' — o Bling rejeita valores inválidos
-    // Filtramos no frontend mostrando a situação de cada NF
 
+    console.log(`[bling/pedidos] buscando NFs data=${dataBling} params=${params.toString()}`);
     const resp  = await blingFetch(`/nfe?${params}`);
+    console.log(`[bling/pedidos] resp keys:`, Object.keys(resp), '| data length:', resp.data?.length ?? 'null');
     const notas = resp.data || [];
 
     const items = notas.map(n => ({
@@ -1374,7 +1378,9 @@ app.get('/bling/debug/nfe/:id', async (req, res, next) => {
 app.get('/bling/debug/lista', async (req, res, next) => {
   try {
     const data = req.query.data || new Date().toISOString().split('T')[0];
-    const raw  = await blingFetch(`/nfe?dataEmissaoInicial=${data}&dataEmissaoFinal=${data}&pagina=1&limite=5`);
+    const [y,m,d] = data.split('-');
+    const dataBling = `${d}/${m}/${y}`;
+    const raw  = await blingFetch(`/nfe?dataEmissaoInicial=${dataBling}&dataEmissaoFinal=${dataBling}&pagina=1&limite=5`);
     // Retorna só id e numero para fácil leitura
     const resumo = (raw.data||[]).map(n => ({ id: n.id, numero: n.numero, contato: n.contato?.nome }));
     res.json({ resumo, raw_primeiro: raw.data?.[0] || null });
