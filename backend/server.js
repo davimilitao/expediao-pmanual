@@ -1375,6 +1375,61 @@ app.get('/bling/debug/nfe/:id', async (req, res, next) => {
     res.json(raw);
   } catch(err) { next(err); }
 });
+// ── SUPER DEBUG: testa múltiplos endpoints e formatos ────────────
+app.get('/bling/debug/probe', async (req, res, next) => {
+  try {
+    const data = req.query.data || '2026-03-17';
+    const [y,m,d] = data.split('-');
+    const dBR  = `${d}/${m}/${y}`; // dd/mm/yyyy
+    const dISO = data;              // yyyy-mm-dd
+    const results = {};
+
+    // Testa 1: /nfe sem filtros (pega as mais recentes)
+    try {
+      const r = await blingFetch('/nfe?pagina=1&limite=3');
+      results.nfe_sem_filtro = { count: r.data?.length, primeiro: r.data?.[0] ? { id: r.data[0].id, numero: r.data[0].numero, data: r.data[0].dataEmissao } : null };
+    } catch(e) { results.nfe_sem_filtro = { erro: e.message }; }
+
+    // Testa 2: /nfe com data BR
+    try {
+      const r = await blingFetch(`/nfe?dataEmissaoInicial=${dBR}&dataEmissaoFinal=${dBR}&pagina=1&limite=3`);
+      results.nfe_data_BR = { count: r.data?.length, query: `${dBR}` };
+    } catch(e) { results.nfe_data_BR = { erro: e.message }; }
+
+    // Testa 3: /nfe com data ISO
+    try {
+      const r = await blingFetch(`/nfe?dataEmissaoInicial=${dISO}&dataEmissaoFinal=${dISO}&pagina=1&limite=3`);
+      results.nfe_data_ISO = { count: r.data?.length, query: `${dISO}` };
+    } catch(e) { results.nfe_data_ISO = { erro: e.message }; }
+
+    // Testa 4: /pedidos/vendas (endpoint alternativo)
+    try {
+      const r = await blingFetch(`/pedidos/vendas?dataInicial=${dBR}&dataFinal=${dBR}&pagina=1&limite=3`);
+      results.pedidos_vendas_BR = { count: r.data?.length };
+    } catch(e) { results.pedidos_vendas_BR = { erro: e.message }; }
+
+    // Testa 5: /pedidos/vendas sem filtro
+    try {
+      const r = await blingFetch('/pedidos/vendas?pagina=1&limite=3');
+      results.pedidos_vendas_sem_filtro = { count: r.data?.length, primeiro: r.data?.[0]?.id };
+    } catch(e) { results.pedidos_vendas_sem_filtro = { erro: e.message }; }
+
+    // Testa 6: ver campos disponíveis de uma NF se achar alguma
+    const qualquerNfe = results.nfe_sem_filtro?.primeiro;
+    if (qualquerNfe?.id) {
+      try {
+        const det = await blingFetch(`/nfe/${qualquerNfe.id}`);
+        const n = det.data || det;
+        results.nfe_detalhe_campos = Object.keys(n);
+        results.nfe_detalhe_itens_campo = n.itens ? `itens[${n.itens.length}]` : 'sem itens direto';
+        results.nfe_primeiro_item = n.itens?.[0] || null;
+      } catch(e) { results.nfe_detalhe = { erro: e.message }; }
+    }
+
+    res.json(results);
+  } catch(err) { next(err); }
+});
+
 app.get('/bling/debug/lista', async (req, res, next) => {
   try {
     const data = req.query.data || new Date().toISOString().split('T')[0];
