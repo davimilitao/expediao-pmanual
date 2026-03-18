@@ -10,6 +10,7 @@
       section: 'Operação',
       items: [
         { id: 'pedidos', label: 'Pedidos do Dia', icon: '📦', href: '/pedidos',   roles: ['operacao','admin'] },
+        { id: 'bling',   label: 'Pedidos Bling',  icon: '⬡',  href: '/bling',    roles: ['operacao','admin'] },
         { id: 'manual',  label: 'Criar Pedido',   icon: '✏️',  href: '/manual',    roles: ['operacao','admin'] },
       ]
     },

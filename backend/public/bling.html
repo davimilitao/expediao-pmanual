@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pedidos Bling — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/erp.css" />
+  <style>
+    /* ── STATUS BAR ── */
+    .bling-status-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px; border-radius: var(--r-md);
+      border: 1px solid var(--border-default); background: var(--depth-3);
+      margin-bottom: 4px;
+    }
+    .bling-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .bling-dot.ok      { background: var(--accent-green); box-shadow: 0 0 6px rgba(16,185,129,.4); }
+    .bling-dot.off     { background: var(--text-muted); }
+    .bling-dot.expired { background: var(--accent-orange); }
+    .bling-status-text { font-size: 13px; font-weight: 600; flex: 1; }
+    .bling-status-sub  { font-size: 11px; color: var(--text-muted); }
+
+    /* ── FILTRO DATA ── */
+    .filter-bar {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+
+    /* ── PEDIDO CARD ── */
+    .pedido-card {
+      background: var(--depth-3); border: 1px solid var(--border-default);
+      border-radius: var(--r-lg); overflow: hidden; transition: .15s;
+    }
+    .pedido-card:hover { border-color: var(--border-strong); }
+    .pedido-card.clonado { border-color: rgba(16,185,129,.3); background: rgba(16,185,129,.03); }
+
+    .pedido-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; gap: 12px; cursor: pointer;
+    }
+    .pedido-hdr-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .pedido-numero {
+      font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700;
+    }
+    .pedido-cliente { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pedido-sub     { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+    .pedido-mkt {
+      font-size: 9px; font-weight: 800; padding: 2px 7px;
+      border-radius: var(--r-full); flex-shrink: 0;
+    }
+    .mkt-ml    { background: rgba(245,200,66,.9); color: #000; }
+    .mkt-shop  { background: rgba(249,115,22,.15); color: var(--accent-orange); border: 1px solid rgba(249,115,22,.25); }
+    .mkt-other { background: var(--depth-5); color: var(--text-secondary); border: 1px solid var(--border-default); }
+
+    .pedido-valor {
+      font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700;
+      color: var(--accent-green); flex-shrink: 0;
+    }
+
+    .pedido-itens {
+      border-top: 1px solid var(--border-subtle);
+      padding: 10px 16px; display: none; flex-direction: column; gap: 6px;
+      background: var(--depth-4);
+    }
+    .pedido-itens.open { display: flex; }
+
+    .item-linha {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; background: var(--depth-3); border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+    }
+    .item-sku {
+      font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+      color: var(--accent-blue); flex-shrink: 0;
+    }
+    .item-nome { font-size: 12px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-qty  { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+
+    .item-match-ok  { color: var(--accent-green); font-size: 10px; font-weight: 700; }
+    .item-match-no  { color: var(--accent-red);   font-size: 10px; font-weight: 700; }
+
+    .pedido-footer {
+      display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+      padding: 10px 16px; border-top: 1px solid var(--border-subtle);
+      background: var(--depth-4);
+    }
+    .clonado-tag {
+      font-size: 11px; font-weight: 700; color: var(--accent-green);
+      background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.2);
+      border-radius: var(--r-full); padding: 3px 9px;
+    }
+
+    /* ── AVISO SKUs ── */
+    .sku-aviso {
+      background: rgba(249,115,22,.08); border: 1px solid rgba(249,115,22,.2);
+      border-radius: var(--r-sm); padding: 6px 10px;
+      font-size: 11px; color: var(--accent-orange);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* ── EMPTY / LOADING ── */
+    .list-msg {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 60px 20px; gap: 10px;
+      color: var(--text-muted); text-align: center;
+    }
+    .list-msg .ico { font-size: 40px; opacity: .2; }
+    .list-msg p    { font-size: 14px; max-width: 300px; line-height: 1.6; }
+
+    /* ── CONNECT CARD ── */
+    .connect-card {
+      background: var(--depth-3); border: 1px solid var(--border-default);
+      border-radius: var(--r-xl); padding: 48px 32px; text-align: center;
+      max-width: 440px; margin: 0 auto;
+    }
+    .connect-icon { font-size: 56px; margin-bottom: 16px; }
+    .connect-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .connect-desc  { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; }
+
+    /* ── SKELETON ── */
+    .skel-card {
+      background: var(--depth-3); border: 1px solid var(--border-default);
+      border-radius: var(--r-lg); padding: 16px; display: flex; gap: 12px; align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="erp-layout">
+  <div id="sidebar-placeholder"></div>
+
+  <main class="erp-main">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">⬡ Pedidos do Bling</h1>
+        <p class="page-subtitle">Importe pedidos reais e crie na fila de separação com um clique</p>
+      </div>
+    </div>
+
+    <div class="page-content" id="pageContent">
+      <!-- Preenchido pelo JS -->
+      <div class="list-msg">
+        <div class="ico">⬡</div>
+        <p>Verificando conexão com o Bling…</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/menu.js"></script>
+<script>
+'use strict';
+
+const TK = 'expedicao_pro_terminal_id';
+function tid(){let i=localStorage.getItem(TK);if(!i){i=crypto.randomUUID();localStorage.setItem(TK,i);}return i;}
+
+async function api(path, opts={}){
+  const token=localStorage.getItem('expedicao_token')||'';
+  const res=await fetch(path,{...opts,headers:{'content-type':'application/json','x-terminal-id':tid(),'authorization':`Bearer ${token}`,...(opts.headers||{})}});
+  const d=await res.json().catch(()=>({}));
+  if(res.status===401 && path !== '/bling/status'){
+    if(d.error==='bling_not_authorized') throw new Error('bling_not_authorized');
+    window.location.href='/login'; return null;
+  }
+  if(!res.ok && res.status!==401) throw new Error(d.error||`HTTP ${res.status}`);
+  return d;
+}
+
+function esc(s){return(s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);}
+
+let _tt=null;
+function toast(msg,type='info'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`toast show ${type}`;
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ── ESTADO ──
+let STATE = {
+  pedidos:   [],
+  clonados:  new Set(JSON.parse(localStorage.getItem('bling_clonados')||'[]')),
+  loading:   false,
+  dataSel:   new Date().toISOString().split('T')[0],
+};
+
+function saveClonados(){ localStorage.setItem('bling_clonados', JSON.stringify([...STATE.clonados])); }
+
+// ── BOOT ──
+async function boot(){
+  // Verificar parâmetros de URL (callback OAuth)
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('success')){
+    toast('✅ Bling conectado com sucesso!','ok');
+    history.replaceState({},'','/bling');
+  }
+  if(params.get('error')){
+    toast(`❌ Erro ao conectar: ${params.get('error')}`,'error');
+    history.replaceState({},'','/bling');
+  }
+
+  const status = await api('/bling/status').catch(()=>null);
+  if(!status || !status.authorized){
+    renderConnect();
+  } else {
+    renderMain(status);
+    carregarPedidos();
+  }
+}
+
+// ── TELA DE CONEXÃO ──
+function renderConnect(){
+  document.getElementById('pageContent').innerHTML = `
+    <div class="connect-card">
+      <div class="connect-icon">⬡</div>
+      <div class="connect-title">Conectar ao Bling</div>
+      <div class="connect-desc">
+        Autorize o Expedição Pro a acessar seus pedidos e notas fiscais do Bling para importar automaticamente para a fila de separação.
+      </div>
+      <a href="/bling/auth" class="btn btn-primary btn-lg" style="display:inline-flex;">
+        🔗 Autorizar acesso ao Bling
+      </a>
+      <div style="margin-top:16px;font-size:12px;color:var(--text-muted);line-height:1.6;">
+        Você será redirecionado para o Bling para autorizar.<br>
+        Apenas leitura de pedidos e NFs de saída.
+      </div>
+    </div>`;
+}
+
+// ── TELA PRINCIPAL ──
+function renderMain(status){
+  document.getElementById('pageContent').innerHTML = `
+    <!-- Status da conexão -->
+    <div class="bling-status-bar">
+      <div class="bling-dot ok"></div>
+      <div>
+        <div class="bling-status-text">Bling conectado</div>
+        <div class="bling-status-sub">Atualizado: ${status.updatedAtMs ? new Date(status.updatedAtMs).toLocaleString('pt-BR') : '–'}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="desconectar()">Desconectar</button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-bar">
+      <div class="field" style="flex-shrink:0;">
+        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;">Data</label>
+        <input type="date" id="dataInput" value="${STATE.dataSel}"
+          style="background:var(--depth-4);border:1px solid var(--border-default);border-radius:var(--r-md);padding:8px 12px;color:var(--text-primary);font-family:var(--font-body);font-size:13px;outline:none;"
+          onchange="STATE.dataSel=this.value;carregarPedidos()" />
+      </div>
+      <div style="padding-top:18px;">
+        <button class="btn btn-ghost btn-sm" onclick="carregarPedidos()">⟳ Atualizar</button>
+      </div>
+      <div style="padding-top:18px;margin-left:auto;font-size:12px;color:var(--text-muted)" id="countLabel"></div>
+    </div>
+
+    <!-- Lista de pedidos -->
+    <div id="listaPedidos">
+      ${skeletonCards(4)}
+    </div>`;
+}
+
+function skeletonCards(n){
+  return Array(n).fill(0).map(()=>`
+    <div class="skel-card">
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+        <div class="skeleton" style="height:12px;width:40%;border-radius:4px;"></div>
+        <div class="skeleton" style="height:14px;width:70%;border-radius:4px;"></div>
+        <div class="skeleton" style="height:10px;width:30%;border-radius:4px;"></div>
+      </div>
+      <div class="skeleton" style="width:90px;height:34px;border-radius:var(--r-md);"></div>
+    </div>`).join('');
+}
+
+// ── CARREGAR PEDIDOS ──
+async function carregarPedidos(){
+  const lista = document.getElementById('listaPedidos');
+  if(!lista) return;
+  lista.innerHTML = skeletonCards(5);
+  document.getElementById('countLabel').textContent = '';
+
+  try {
+    const d = await api(`/bling/pedidos?data=${STATE.dataSel}`);
+    STATE.pedidos = d.items || [];
+    renderPedidos();
+    document.getElementById('countLabel').textContent = `${STATE.pedidos.length} pedido(s) encontrado(s)`;
+  } catch(e){
+    if(e.message === 'bling_not_authorized'){
+      renderConnect(); return;
+    }
+    lista.innerHTML = `<div class="list-msg"><div class="ico">⚠️</div><p>Erro: ${esc(e.message)}</p></div>`;
+    toast(`Erro ao carregar: ${e.message}`, 'error');
+  }
+}
+
+// ── RENDER LISTA ──
+function renderPedidos(){
+  const lista = document.getElementById('listaPedidos');
+  if(!STATE.pedidos.length){
+    lista.innerHTML = `<div class="list-msg"><div class="ico">📭</div><p>Nenhum pedido encontrado para ${STATE.dataSel}.</p><p style="font-size:12px;">Tente outra data ou verifique os filtros de situação no Bling.</p></div>`;
+    return;
+  }
+
+  lista.innerHTML = STATE.pedidos.map(p => renderPedidoCard(p)).join('');
+}
+
+function renderPedidoCard(p){
+  const jaClon  = STATE.clonados.has(String(p.id));
+  const mktCls  = p.marketplace==='MERCADO_LIVRE'?'mkt-ml':p.marketplace==='SHOPEE'?'mkt-shop':'mkt-other';
+  const mktLabel= p.marketplace==='MERCADO_LIVRE'?'ML':p.marketplace==='SHOPEE'?'SHOPEE':'OUTROS';
+  const valor   = Number(p.valorTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+  const itensHtml = (p.itens||[]).map(it => `
+    <div class="item-linha">
+      <span class="item-sku">${esc(it.sku||'—')}</span>
+      <span class="item-nome">${esc(it.nome||'')}</span>
+      <span class="item-qty">×${it.qty}</span>
+      ${it.sku ? `<span class="item-match-ok">✓</span>` : `<span class="item-match-no">⚠ sem SKU</span>`}
+    </div>`).join('');
+
+  const semSku = (p.itens||[]).filter(it=>!it.sku).length;
+
+  return `
+    <div class="pedido-card${jaClon?' clonado':''}" id="card-${p.id}">
+      <div class="pedido-hdr" onclick="toggleItens(${p.id})">
+        <div class="pedido-hdr-left">
+          <div>
+            <div class="pedido-numero">#${esc(String(p.numeroPedido||p.numero||p.id))}</div>
+            <div class="pedido-sub">${esc(p.dataEmissao||'')} · ${esc(p.situacao||'')}</div>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="pedido-cliente">${esc(p.cliente?.nome||'Cliente')}</div>
+            <div class="pedido-sub">${(p.itens||[]).length} item(s)</div>
+          </div>
+        </div>
+        <span class="pedido-mkt ${mktCls}">${mktLabel}</span>
+        <span class="pedido-valor">${valor}</span>
+        <span style="color:var(--text-muted);font-size:12px;margin-left:4px;">▾</span>
+      </div>
+
+      <div class="pedido-itens" id="itens-${p.id}">
+        ${semSku ? `<div class="sku-aviso">⚠️ ${semSku} item(s) sem SKU — não serão incluídos no pedido</div>` : ''}
+        ${itensHtml}
+      </div>
+
+      <div class="pedido-footer">
+        ${jaClon
+          ? `<span class="clonado-tag">✓ Já criado no sistema</span>
+             <a href="/pedidos" class="btn btn-ghost btn-sm">Ver pedidos →</a>`
+          : `<button class="btn btn-ghost btn-sm" onclick="toggleItens(${p.id})">Ver itens</button>
+             <button class="btn btn-primary btn-sm" onclick="clonarPedido(${p.id})" id="btn-clonar-${p.id}">
+               📥 Criar na Expedição
+             </button>`
+        }
+      </div>
+    </div>`;
+}
+
+// ── TOGGLE ITENS ──
+window.toggleItens = function(id){
+  const el = document.getElementById(`itens-${id}`);
+  if(el) el.classList.toggle('open');
+};
+
+// ── CLONAR PEDIDO ──
+window.clonarPedido = async function(id){
+  const pedido = STATE.pedidos.find(p => p.id === id);
+  if(!pedido) return;
+
+  const btn = document.getElementById(`btn-clonar-${id}`);
+  if(btn){ btn.disabled=true; btn.textContent='Criando…'; }
+
+  try {
+    const result = await api('/bling/clonar', {
+      method: 'POST',
+      body: JSON.stringify({
+        blingPedidoId: pedido.id,
+        numeroPedido:  String(pedido.numeroPedido || pedido.numero || pedido.id),
+        marketplace:   pedido.marketplace,
+        clienteNome:   `${pedido.cliente?.nome || ''} #${pedido.numeroPedido || pedido.numero}`.trim(),
+        itens:         pedido.itens,
+      })
+    });
+
+    if(result.ok){
+      STATE.clonados.add(String(id));
+      saveClonados();
+
+      let msg = `✅ Pedido ${result.orderId} criado!`;
+      if(result.skusFaltando?.length){
+        msg += ` (${result.skusFaltando.length} SKU(s) não encontrado(s))`;
+        toast(msg, 'warn');
+      } else {
+        toast(msg, 'ok');
+      }
+
+      // Atualiza card sem re-renderizar tudo
+      const card = document.getElementById(`card-${id}`);
+      if(card){
+        card.classList.add('clonado');
+        const footer = card.querySelector('.pedido-footer');
+        if(footer){
+          footer.innerHTML = `
+            <span class="clonado-tag">✓ Criado: ${esc(result.orderId)}</span>
+            <a href="/pedidos" class="btn btn-ghost btn-sm">Ver na fila →</a>`;
+        }
+      }
+    }
+  } catch(e){
+    toast(`Erro: ${e.message}`, 'error');
+    if(btn){ btn.disabled=false; btn.textContent='📥 Criar na Expedição'; }
+  }
+};
+
+// ── DESCONECTAR ──
+window.desconectar = async function(){
+  if(!confirm('Desconectar o Bling? Você precisará autorizar novamente.')) return;
+  await api('/bling/disconnect', { method:'POST' });
+  localStorage.removeItem('bling_clonados');
+  renderConnect();
+  toast('Bling desconectado', 'info');
+};
+
+// ── INIT ──
+boot();
+</script>
+</body>
+</html>
