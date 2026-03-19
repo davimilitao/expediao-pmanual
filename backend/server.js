@@ -1322,10 +1322,11 @@ app.get('/bling/pedidos/:id', async (req, res, next) => {
       situacao: p.situacao?.valor || '',
       cliente: { nome: p.contato?.nome || '' },
       valorTotal: p.total || 0,
-      // Mapeando os itens do Pedido de Venda no Bling v3
+      
+      // Mapeamento CORRIGIDO: Agora o sistema procura o SKU em todos os lugares possíveis do Bling
       itens: (p.itens || []).map(it => ({
-        sku: it.produto?.codigo || '',
-        nome: it.descricao || '',
+        sku: (it.codigo || it.produto?.codigo || '').toString().trim(),
+        nome: (it.descricao || it.produto?.descricao || '').toString().trim(),
         qty: Number(it.quantidade || 1),
         preco: Number(it.valor || 0)
       }))
