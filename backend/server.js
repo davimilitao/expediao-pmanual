@@ -310,6 +310,10 @@ app.get('/orders/list', async (req, res, next) => {
         const ov = overrideMap.get(it.sku) || {};
         return {
           ...it,
+          // Sanitiza qty e checkedQty — garante sempre number
+          // (pedidos antigos podem ter FieldValue corrompido)
+          qty:        Number(it.qty        ?? 0) || 0,
+          checkedQty: Number(it.checkedQty ?? 0) || 0,
           image: (Array.isArray(ov.stockPhotos) && ov.stockPhotos[0])
             || (Array.isArray(it.images) && it.images[0])
             || it.image
