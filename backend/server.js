@@ -100,39 +100,37 @@ const multerNuvem = require('multer');
 const storageMemoria = multerNuvem.memoryStorage();
 const uploadParaCloud = multerNuvem({ storage: storageMemoria });
 
-// Esta é a rota que você vai testar no console
 app.post('/admin/save-photo-cloudinary/:sku', uploadParaCloud.single('file'), async (req, res) => {
-  console.log('>>> Rota de teste acionada para o SKU:', req.params.sku);
-  
   try {
-    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo na requisição' });
+    const sku = req.params.sku;
+    const kind = req.body.kind; // 'bin', 'stock' ou 'box'
+    if (!req.file) return res.status(400).json({ error: 'Arquivo ausente' });
 
     const stream = cloudinary.uploader.upload_stream(
-      { 
-        folder: `teste_expedicao`,
-        public_id: `foto_${req.params.sku}_${Date.now()}`
-      },
+      { folder: `expedicao_fotos/${sku}`, public_id: `${kind}_${Date.now()}` },
       async (error, result) => {
-        if (error) {
-          console.error('Erro Cloudinary:', error);
-          return res.status(500).json({ error: 'Erro Cloudinary', detail: error });
+        if (error) return res.status(500).json({ error });
+
+        const updateData = { image: result.secure_url, updatedAtMs: Date.now() };
+
+        // Grava no campo específico que o seu admin.html espera ler
+        if (kind === 'bin') {
+          updateData.binPhoto = result.secure_url;
+        } else if (kind === 'stock') {
+          // Adiciona à lista de fotos do produto (Firestore Union)
+          const admin = require('firebase-admin');
+          updateData.stockPhotos = admin.firestore.FieldValue.arrayUnion(result.secure_url);
+        } else if (kind === 'box') {
+          const admin = require('firebase-admin');
+          updateData.boxPhotos = admin.firestore.FieldValue.arrayUnion(result.secure_url);
         }
 
-        // Salva no Firestore no campo 'image'
-        await db.collection('product_overrides').doc(req.params.sku).set({
-          image: result.secure_url,
-          updatedAtMs: Date.now()
-        }, { merge: true });
-
-        console.log('>>> Sucesso! Foto salva em:', result.secure_url);
+        await db.collection('product_overrides').doc(sku).set(updateData, { merge: true });
         res.json({ ok: true, url: result.secure_url });
       }
     );
     stream.end(req.file.buffer);
-  } catch (err) {
-    console.error('Erro na Rota:', err);
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // LOG PARA VOCÊ VER NO TERMINAL SE A ROTA SUBIU

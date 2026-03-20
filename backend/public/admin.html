@@ -415,17 +415,65 @@ async function saveNotes(){
   catch(e){toast(`Erro: ${e.message}`,'err');}
 }
 
-async function uploadPhoto(kind,input){
-  if(!currentSku||!input.files?.length)return;
-  const formData=new FormData();
-  formData.append('file',input.files[0]);
-  formData.append('kind',kind);
-  toast('Enviando foto…','info');
-  try{
-    const res=await fetch(`/admin/products/${encodeURIComponent(currentSku)}/upload`,{method:'POST',headers:{'authorization':`Bearer ${localStorage.getItem('expedicao_token')||''}`},body:formData});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    toast('Foto salva ✓','ok');input.value='';await reloadProduct();
-  }catch(e){toast(`Erro no upload: ${e.message}`,'err');}
+// async function uploadPhoto(kind,input){
+//   if(!currentSku||!input.files?.length)return;
+//   const formData=new FormData();
+//   formData.append('file',input.files[0]);
+//   formData.append('kind',kind);
+//   toast('Enviando foto…','info');
+//   try{
+//     const res=await fetch(`/admin/products/${encodeURIComponent(currentSku)}/upload`,{method:'POST',headers:{'authorization':`Bearer ${localStorage.getItem('expedicao_token')||''}`},body:formData});
+//     if(!res.ok)throw new Error(`HTTP ${res.status}`);
+//     toast('Foto salva ✓','ok');input.value='';await reloadProduct();
+//   }catch(e){toast(`Erro no upload: ${e.message}`,'err');}
+// }
+
+async function uploadPhoto(kind, input) {
+  // 1. Validação inicial (SKU atual e se há arquivo selecionado)
+  if (!currentSku || !input.files?.length) return;
+
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+  formData.append('kind', kind); // 'stock', 'bin' ou 'box'
+
+  toast('Enviando para o Cloudinary...', 'info');
+
+  try {
+    // 2. Aponta para a NOVA rota que acabamos de validar no terminal
+    const res = await fetch(`/admin/save-photo-cloudinary/${encodeURIComponent(currentSku)}`, {
+      method: 'POST',
+      headers: {
+        'authorization': `Bearer ${localStorage.getItem('expedicao_token') || ''}`
+        // Nota: Não defina Content-Type aqui, o navegador faz isso sozinho para FormData
+      },
+      body: formData
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || `Erro HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (data.ok) {
+      toast('Foto salva no Cloudinary ✓', 'ok');
+      input.value = ''; // Limpa o campo de arquivo para o próximo uso
+      
+      // 3. Atualiza a tela para mostrar a foto nova (Cloudinary)
+      if (typeof reloadProduct === 'function') {
+        await reloadProduct();
+      } else {
+        location.reload(); // Se não achar o reloadProduct, recarrega a página toda
+      }
+    } else {
+      throw new Error(data.error || 'Falha ao salvar no banco');
+    }
+
+  } catch (e) {
+    console.error('Erro no upload:', e);
+    toast(`Erro no upload: ${e.message}`, 'err');
+  }
 }
 
 async function deletePhoto(kind,idx){
@@ -440,14 +488,37 @@ async function deletePhoto(kind,idx){
   catch(e){toast(`Erro: ${e.message}`,'err');}
 }
 
-async function reloadProduct(){
-  if(!currentSku)return;
-  try{
-    const d=await api(`/admin/products/${encodeURIComponent(currentSku)}`);
-    if(!d)return;
-    currentProduct=d.item;renderPanel(d.item);
-    document.querySelectorAll('.result-item').forEach(el=>el.classList.toggle('active',el.querySelector('.ri-sku')?.textContent===currentSku));
-  }catch{}
+async function reloadProduct() {
+  if (!currentSku) return;
+  try {
+    const d = await api(`/admin/products/${encodeURIComponent(currentSku)}`);
+    if (!d || !d.item) return;
+
+    const item = d.item;
+    const ov = item.override || {};
+
+    // Helper para decidir se usa /uploads/ ou link direto (Cloudinary)
+    const fix = (url) => (url && !url.startsWith('http')) ? `/uploads/${url}` : url;
+
+    // 1. Corrige a imagem principal
+    item.image = fix(item.image);
+
+    // 2. Corrige a foto da prateleira (Bin)
+    if (ov.binPhoto) ov.binPhoto = fix(ov.binPhoto);
+
+    // 3. Corrige as listas de fotos (Stock e Box)
+    if (Array.isArray(ov.stockPhotos)) ov.stockPhotos = ov.stockPhotos.map(fix);
+    if (Array.isArray(ov.boxPhotos)) ov.boxPhotos = ov.boxPhotos.map(fix);
+
+    currentProduct = item;
+    renderPanel(item); // Agora o painel terá os links corretos para renderizar
+
+    document.querySelectorAll('.result-item').forEach(el => 
+        el.classList.toggle('active', el.querySelector('.ri-sku')?.textContent === currentSku)
+    );
+  } catch (e) {
+    console.error("Erro ao recarregar:", e);
+  }
 }
 
 window.saveBin=saveBin;window.saveNotes=saveNotes;window.uploadPhoto=uploadPhoto;window.deletePhoto=deletePhoto;
