@@ -42,7 +42,7 @@
   --sidebar-transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Tipografia */
-  --font-display: 'Syne', sans-serif;
+  --font-display: 'Roboto', sans-serif;
   --font-body:    'DM Sans', sans-serif;
 
   /* Raios */
@@ -97,7 +97,7 @@ input, select, textarea { font-family: var(--font-body); }
   flex-direction: column;
   flex-shrink: 0;
   transition: width var(--sidebar-transition);
-  overflow: hidden;
+  overflow: unset!important;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -106,6 +106,7 @@ input, select, textarea { font-family: var(--font-body); }
 
 .erp-sidebar.collapsed {
   width: var(--sidebar-w-collapsed);
+  overflow: unset!important;
 }
 
 /* Logo / Brand */
@@ -180,7 +181,7 @@ input, select, textarea { font-family: var(--font-body); }
   border-color: var(--accent-blue);
   color: #fff;
 }
-.erp-sidebar.collapsed .sidebar-toggle { right: -12px; }
+.erp-sidebar.collapsed .sidebar-toggle { right: -18px; }
 
 /* Nav */
 .sidebar-nav {
@@ -1253,3 +1254,36 @@ textarea { resize: vertical; min-height: 80px; }
 .text-xs { font-size: 11px; }
 .font-mono { font-family: 'Space Mono', monospace; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Cores de Marca para os Cards --- */
+.order-card.m-meli { border-left: 6px solid #ffe600; } /* Amarelo Meli */
+.order-card.m-shopee { border-left: 6px solid #ee4d2d; } /* Laranja Shopee */
+.order-card.m-manual { border-left: 6px solid #8b949e; } /* Cinza Manual */
+
+/* Tag Manual */
+.tag-manual { 
+    background: #30363d; color: #8b949e; font-size: 10px; 
+    padding: 2px 6px; border-radius: 4px; font-weight: 900; 
+}
+
+/* Área de Itens no Card (Miniaturas) */
+.card-items-preview {
+    display: flex; flex-direction: column; gap: 4px;
+    margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 8px;
+}
+.item-preview-line {
+    display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary);
+}
+.item-mini-photo {
+    width: 24px; height: 24px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border);
+}
+.item-preview-name {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+}
+
+/* Estilo do Apelido clicável */
+.nickname-copy {
+    color: var(--accent); cursor: pointer; text-decoration: underline dotted;
+    font-size: 12px; margin-left: 5px;
+}
+.nickname-copy:hover { color: #fff; }

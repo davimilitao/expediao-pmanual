@@ -1,5 +1,7 @@
-require('dotenv').config();
+// expedicao-pro/backend/server.js
 'use strict';
+
+require('dotenv').config();
 
 const { setupAuthRoutes } = require('./auth');
 const fs = require('fs');
@@ -11,22 +13,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
-
-const cloudinary = require('cloudinary').v2;
-
-// Configuração Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// TESTE DE DIAGNÓSTICO (Apague após funcionar)
-if (!process.env.CLOUDINARY_API_KEY) {
-  console.error('❌ ERRO CRÍTICO: Variável CLOUDINARY_API_KEY não encontrada no sistema!');
-} else {
-  console.log('✅ Chaves do Cloudinary carregadas com sucesso.');
-}
 
 const admin = require('firebase-admin');
 
@@ -88,57 +74,6 @@ app.use(helmet({
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: '6mb' }));
 app.use(morgan('tiny'));
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-// --- INÍCIO DO MOTOR DE TESTE CLOUDINARY ---
-// Usei nomes totalmente novos para não dar erro de "já declarado"
-const multerNuvem = require('multer');
-const storageMemoria = multerNuvem.memoryStorage();
-const uploadParaCloud = multerNuvem({ storage: storageMemoria });
-
-// Esta é a rota que você vai testar no console
-app.post('/admin/save-photo-cloudinary/:sku', uploadParaCloud.single('file'), async (req, res) => {
-  console.log('>>> Rota de teste acionada para o SKU:', req.params.sku);
-  
-  try {
-    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo na requisição' });
-
-    const stream = cloudinary.uploader.upload_stream(
-      { 
-        folder: `teste_expedicao`,
-        public_id: `foto_${req.params.sku}_${Date.now()}`
-      },
-      async (error, result) => {
-        if (error) {
-          console.error('Erro Cloudinary:', error);
-          return res.status(500).json({ error: 'Erro Cloudinary', detail: error });
-        }
-
-        // Salva no Firestore no campo 'image'
-        await db.collection('product_overrides').doc(req.params.sku).set({
-          image: result.secure_url,
-          updatedAtMs: Date.now()
-        }, { merge: true });
-
-        console.log('>>> Sucesso! Foto salva em:', result.secure_url);
-        res.json({ ok: true, url: result.secure_url });
-      }
-    );
-    stream.end(req.file.buffer);
-  } catch (err) {
-    console.error('Erro na Rota:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// LOG PARA VOCÊ VER NO TERMINAL SE A ROTA SUBIU
-console.log('✅ Rota /admin/save-photo-cloudinary/:sku carregada com sucesso!');
-// --- FIM DO MOTOR DE TESTE ---
-
 setupAuthRoutes(app, db);
 
 // ---------------- Static (public) ----------------
@@ -1571,87 +1506,6 @@ app.post('/bling/clonar', async (req, res, next) => {
 app.use((err, req, res, next) => {
   const status = err.statusCode || 500;
   res.status(status).json({ error: err.message || 'internal_error', status });
-});
-
-// --- ROTA DE TESTE ÚNICO (ISOLADA) ---
-const storageTeste = multer.memoryStorage();
-const uploadTeste = multer({ storage: storageTeste });
-
-app.post('/admin/teste-foto/:sku', uploadTeste.single('file'), async (req, res) => {
-  try {
-    const skuTeste = (req.params.sku || '').toString().trim();
-    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-
-    console.log('[TESTE] Iniciando upload para SKU:', skuTeste);
-
-    // Envio direto para o Cloudinary
-    const streamTeste = cloudinary.uploader.upload_stream(
-      { 
-        folder: `teste_expedicao/${skuTeste}`,
-        public_id: `foto_principal_${Date.now()}`
-      },
-      async (error, result) => {
-        if (error) return res.status(500).json({ error: 'Erro Cloudinary', detail: error });
-
-        const urlFinal = result.secure_url;
-
-        // Grava no Firebase (Coleção de teste para não sujar a original)
-        await db.collection('product_overrides').doc(skuTeste).set({
-          image: urlFinal, // Força a imagem principal
-          stockPhotos: [urlFinal],
-          updatedAtMs: Date.now()
-        }, { merge: true });
-
-        console.log('[TESTE] Sucesso! URL:', urlFinal);
-        res.json({ ok: true, url: urlFinal });
-      }
-    );
-
-    streamTeste.end(req.file.buffer);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// --- ROTA DE EMERGÊNCIA PARA TESTE CLOUDINARY ---
-// Coloque isso no final do arquivo, antes do app.listen
-
-const storageCloudTeste = multer.memoryStorage();
-const uploadCloudTeste = multer({ storage: storageCloudTeste });
-
-app.post('/admin/save-photo-cloudinary/:sku', uploadCloudTeste.single('file'), async (req, res) => {
-  try {
-    const skuAlvo = req.params.sku;
-    if (!req.file) return res.status(400).json({ error: 'Arquivo não enviado' });
-
-    // Usa a configuração do cloudinary que já deve estar no seu topo
-    const stream = cloudinary.uploader.upload_stream(
-      { 
-        folder: `expedicao_fotos/${skuAlvo}`,
-        public_id: `principal_${Date.now()}`
-      },
-      async (error, result) => {
-        if (error) {
-            console.error('Erro Cloudinary:', error);
-            return res.status(500).json({ error: 'Erro no Cloudinary', detail: error });
-        }
-
-        // Salva no Firestore
-        await db.collection('product_overrides').doc(skuAlvo).set({
-          image: result.secure_url,
-          stockPhotos: [result.secure_url],
-          updatedAtMs: Date.now()
-        }, { merge: true });
-
-        res.json({ ok: true, url: result.secure_url });
-      }
-    );
-
-    stream.end(req.file.buffer);
-  } catch (err) {
-    console.error('Erro na Rota:', err);
-    res.status(500).json({ error: err.message });
-  }
 });
 
 app.listen(PORT, () => {
