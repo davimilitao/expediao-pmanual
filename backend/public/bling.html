@@ -213,10 +213,13 @@ function renderMain(status){
       </div>
       <div class="field">
         <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;">Loja</label>
-        <div style="display:flex;gap:4px;">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
           <button class="sit-btn active" data-loja="all"    onclick="setLoja('all')">Todas</button>
           <button class="sit-btn" data-loja="ml"     onclick="setLoja('ml')">⬡ ML</button>
+          <button class="sit-btn" data-loja="mlfull" onclick="setLoja('mlfull')">⬡ ML Full</button>
           <button class="sit-btn" data-loja="shopee" onclick="setLoja('shopee')">🛍️ Shopee</button>
+          <button class="sit-btn" data-loja="magalu" onclick="setLoja('magalu')">🛒 Magalu</button>
+          <button class="sit-btn" data-loja="tiktok" onclick="setLoja('tiktok')">🎵 TikTok</button>
         </div>
       </div>
       <button class="btn btn-ghost btn-sm" style="align-self:flex-end;" onclick="carregarNFs()">⟳</button>

@@ -1230,12 +1230,17 @@ async function blingFetch(path) {
 
 // Detecta marketplace pelo campo loja ou padrão do nome do cliente
 function detectarMkt(nf) {
+  // tipoIntegracao é o campo mais confiável (ex: "Shopee", "Mercado Livre")
+  const tipo = (nf.tipoIntegracao || '').toLowerCase();
   const loja = (nf.loja?.descricao || nf.loja?.nome || nf.origem?.descricao || '').toLowerCase();
-  const nome = (nf.contato?.nome || '').toLowerCase();
-  if (loja.includes('mercado') || loja.includes('meli') || loja.includes('mlb')) return 'MERCADO_LIVRE';
-  if (loja.includes('shopee')) return 'SHOPEE';
-  // Padrão ML: "Nome Sobrenome (usuario.ml)" — parênteses sem espaço no usuário
+  const nome = (nf.contato?.nome   || '').toLowerCase();
+  const num  = String(nf.numeroPedidoLoja || '');
+
+  if (tipo.includes('shopee') || loja.includes('shopee')) return 'SHOPEE';
+  if (tipo.includes('mercado') || tipo.includes('meli') || tipo.includes('mlb')) return 'MERCADO_LIVRE';
+  if (loja.includes('mercado') || loja.includes('meli')) return 'MERCADO_LIVRE';
   if (nome.match(/\([a-z0-9._-]+\)$/)) return 'MERCADO_LIVRE';
+  if (num.length >= 11 && /^\d+$/.test(num)) return 'MERCADO_LIVRE';
   return 'OUTROS';
 }
 
@@ -1307,11 +1312,19 @@ app.get('/bling/pedidos', async (req, res, next) => {
     const lojaFiltro = (req.query.loja || 'all').toLowerCase();
     const matchLoja = (n) => {
       if (lojaFiltro === 'all') return true;
-      const loja = (n.loja?.descricao || n.loja?.nome || '').toLowerCase();
-      const nome = (n.contato?.nome   || '').toLowerCase();
-      if (lojaFiltro === 'ml')     return loja.includes('mercado') || loja.includes('meli') || nome.includes('(');
-      if (lojaFiltro === 'shopee') return loja.includes('shopee');
-      return loja.includes(lojaFiltro);
+      // IDs fixos das lojas no Bling
+      const LOJAS = {
+        ml:     '205524457',  // Mercado Livre
+        mlfull: '205920469',  // Mercado Livre Full
+        shopee: '205547154',  // Shopee
+        magalu: '205744394',  // Magalu
+        tiktok: '205540309',  // TikTok
+        ddbaby: '205570762',  // ddbaby
+        nuv:    '205530029',  // Nuvemshop
+      };
+      const idLoja = String(n.loja?.id || '');
+      if (LOJAS[lojaFiltro]) return idLoja === LOJAS[lojaFiltro];
+      return idLoja === lojaFiltro;
     };
 
     const notasFiltradas = notasDia.filter(n => matchLoja(n));
@@ -1326,6 +1339,7 @@ app.get('/bling/pedidos', async (req, res, next) => {
       situacao:     n.situacao?.descricao || n.situacao?.nome || '',
       cliente:      { nome: n.contato?.nome || '' },
       lojaNome:     n.loja?.descricao || n.loja?.nome || '',
+      lojaId:       String(n.loja?.id || ''),
       marketplace:  detectarMkt(n),
       valorTotal:   n.valorNota || n.valorTotal || 0,
       linkDanfe:    n.linkDanfe  || null,
@@ -1482,13 +1496,19 @@ app.get('/bling/debug/lojas', async (req, res, next) => {
 
 app.get('/bling/debug/lista', async (req, res, next) => {
   try {
-    const data = req.query.data || new Date().toISOString().split('T')[0];
-    const [y,m,d] = data.split('-');
-    const dataBling = `${d}/${m}/${y}`;
-    const raw  = await blingFetch(`/nfe?dataEmissaoInicial=${dataBling}&dataEmissaoFinal=${dataBling}&pagina=1&limite=5`);
-    // Retorna só id e numero para fácil leitura
-    const resumo = (raw.data||[]).map(n => ({ id: n.id, numero: n.numero, contato: n.contato?.nome }));
-    res.json({ resumo, raw_primeiro: raw.data?.[0] || null });
+    // Mostra o objeto RAW completo da listagem /nfe (sem detalhe)
+    // para ver quais campos chegam na listagem vs detalhe
+    const raw = await blingFetch('/nfe?pagina=1&situacao=A&limite=3');
+    const primeiro = raw.data?.[0] || null;
+    res.json({
+      total:       raw.data?.length,
+      campos_raw:  primeiro ? Object.keys(primeiro) : [],
+      loja_raw:    primeiro?.loja,
+      valor_raw:   { valorNota: primeiro?.valorNota, valorTotal: primeiro?.valorTotal, valor: primeiro?.valor },
+      sit_raw:     primeiro?.situacao,
+      tipo_raw:    primeiro?.tipoIntegracao,
+      raw_primeiro: primeiro,
+    });
   } catch(err) { next(err); }
 });
 
