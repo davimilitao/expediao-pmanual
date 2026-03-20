@@ -33,6 +33,18 @@ async function api(path, opts = {}) {
   return data;
 }
 
+// --------- utils de imagem ----------
+function getImgUrl(url) {
+  // Se não tiver nada, retorna o placeholder da raiz (sem /uploads/)
+  if (!url) return '/assets/placeholder.png';
+  
+  // Se for Cloudinary (começa com http), retorna a URL pura
+  if (url.startsWith('http')) return url;
+  
+  // Se for arquivo local antigo, aí sim coloca o prefixo
+  return `/uploads/${url}`;
+}
+
 // --------- toast ----------
 const toastEl = document.getElementById('toast');
 let toastTimer = null;
@@ -85,7 +97,7 @@ function renderResults() {
     row.className = 'item';
 
     row.innerHTML = `
-      <div class="item__img"><img alt="" src="./assets/placeholder.png"></div>
+      <div class="item__img"><img alt="" src="${getImgUrl(p.image)}"></div>
       <div class="item__main">
         <div class="item__title">${escapeHtml(p.name || '')}</div>
         <div class="item__meta">
@@ -132,7 +144,7 @@ function renderCart() {
     row.className = 'item';
 
     row.innerHTML = `
-      <div class="item__img"><img alt="" src="./assets/placeholder.png"></div>
+      <div class="item__img"><img alt="" src="${getImgUrl(it.image)}"></div>
       <div class="item__main">
         <div class="item__title">${escapeHtml(it.name || '')}</div>
         <div class="item__meta">
@@ -174,6 +186,7 @@ function addToCart(p, qty) {
   state.cart.set(sku, {
     sku: p.sku,
     name: p.name || '',
+    image: p.image || '', // <-- ADICIONE ESTA LINHA
     ean: p.ean || '',
     bin: p.bin || '',
     qty: nextQty

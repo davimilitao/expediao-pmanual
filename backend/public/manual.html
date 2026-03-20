@@ -188,6 +188,13 @@ async function api(path, opts={}) {
   return d;
 }
 
+// Função para normalizar URLs de imagem no Manual
+function fixImg(url) {
+  if (!url) return '/assets/placeholder.png';
+  // Se for Cloudinary (começa com http), retorna direto. Senão, usa /uploads/
+  return url.startsWith('http') ? url : `/uploads/${url}`;
+}
+
 function esc(s) {
   return (s??'').toString().replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);
 }
@@ -261,7 +268,7 @@ function renderResults() {
     const card = document.createElement('div');
     card.className = 'item-card';
     card.innerHTML = `
-      <img class="item-card-img" src="${esc(p.image||'/assets/placeholder.png')}" onerror="this.src='/assets/placeholder.png'" alt="">
+      <img class="item-card-img" src="${fixImg(p.image)}" onerror="this.src='/assets/placeholder.png'" alt="">
       <div class="item-card-info">
         <div class="item-card-name">${esc(p.name||'')}</div>
         <div class="item-card-tags">
@@ -300,7 +307,7 @@ function renderCart() {
     const card = document.createElement('div');
     card.className = 'item-card';
     card.innerHTML = `
-      <img class="item-card-img" src="${esc(it.image||'/assets/placeholder.png')}" onerror="this.src='/assets/placeholder.png'" alt="">
+      <img class="item-card-img" src="${fixImg(it.image)}" onerror="this.src='/assets/placeholder.png'" alt="">
       <div class="item-card-info">
         <div class="item-card-name">${esc(it.name||'')}</div>
         <div class="item-card-tags">
