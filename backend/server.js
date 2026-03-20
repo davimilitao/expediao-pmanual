@@ -1289,7 +1289,7 @@ app.get('/bling/pedidos', async (req, res, next) => {
 
     // A API Bling v3 /nfe ignora filtros de data na listagem.
     // Buscamos tudo e filtramos pelo campo dataEmissao no backend.
-    const situacaoFiltro = req.query.situacao || 'danfe'; // danfe | all | autorizada
+    const situacaoFiltro = req.query.situacao || 'A'; // A = Autorizadas - Sem DANFE // danfe | all | autorizada
     const params = new URLSearchParams({ pagina, limite: 100 });
 
     const resp  = await blingFetch(`/nfe?${params}`);
@@ -1303,19 +1303,18 @@ app.get('/bling/pedidos', async (req, res, next) => {
           return d === dataSel;
         });
 
-    // Filtrar por situação
-    // "Emitida DANFE" = pronta para imprimir e enviar (fluxo operacional principal)
-    const SITUACOES = {
-      danfe:      s => s.toLowerCase().includes('danfe'),
-      autorizada: s => s.toLowerCase().includes('autorizada'),
-      all:        s => true,
+    // Filtro por loja (marketplace) — aplicado localmente
+    const lojaFiltro = (req.query.loja || 'all').toLowerCase();
+    const matchLoja = (n) => {
+      if (lojaFiltro === 'all') return true;
+      const loja = (n.loja?.descricao || n.loja?.nome || '').toLowerCase();
+      const nome = (n.contato?.nome   || '').toLowerCase();
+      if (lojaFiltro === 'ml')     return loja.includes('mercado') || loja.includes('meli') || nome.includes('(');
+      if (lojaFiltro === 'shopee') return loja.includes('shopee');
+      return loja.includes(lojaFiltro);
     };
-    const matchSit = SITUACOES[situacaoFiltro] || SITUACOES.all;
 
-    const notasFiltradas = notasDia.filter(n => {
-      const sit = n.situacao?.descricao || n.situacao?.nome || '';
-      return matchSit(sit);
-    });
+    const notasFiltradas = notasDia.filter(n => matchLoja(n));
 
     console.log(`[bling/pedidos] data=${dataSel} sit=${situacaoFiltro} | total=${notas.length} dia=${notasDia.length} filtrado=${notasFiltradas.length}`);
 
@@ -1326,6 +1325,7 @@ app.get('/bling/pedidos', async (req, res, next) => {
       dataEmissao:  (n.dataEmissao || n.data || '').split(' ')[0],
       situacao:     n.situacao?.descricao || n.situacao?.nome || '',
       cliente:      { nome: n.contato?.nome || '' },
+      lojaNome:     n.loja?.descricao || n.loja?.nome || '',
       marketplace:  detectarMkt(n),
       valorTotal:   n.valorNota || n.valorTotal || 0,
       linkDanfe:    n.linkDanfe  || null,
@@ -1449,6 +1449,34 @@ app.get('/bling/debug/probe', async (req, res, next) => {
     }
 
     res.json(results);
+  } catch(err) { next(err); }
+});
+
+// ── DEBUG: ver lojas únicas nas NFs (para configurar filtros) ────
+// GET /bling/debug/lojas  — acesse uma vez para ver os nomes das suas lojas
+app.get('/bling/debug/lojas', async (req, res, next) => {
+  try {
+    const resp  = await blingFetch('/nfe?pagina=1&limite=100');
+    const notas = resp.data || [];
+
+    // Extrair lojas únicas com contagem
+    const lojaMap = {};
+    for (const n of notas) {
+      const loja = n.loja?.descricao || n.loja?.nome || n.loja?.id || 'sem loja';
+      const sit  = n.situacao?.descricao || '';
+      if (!lojaMap[loja]) lojaMap[loja] = { count: 0, exemplo_sit: sit, id: n.loja?.id };
+      lojaMap[loja].count++;
+    }
+
+    // Também mostrar numeroPedidoLoja de exemplos para entender padrão FLEX
+    const exemplos = notas.slice(0, 5).map(n => ({
+      numero:           n.numero,
+      loja:             n.loja?.descricao || n.loja?.id,
+      numeroPedidoLoja: n.numeroPedidoLoja,
+      situacao:         n.situacao?.descricao,
+    }));
+
+    res.json({ lojas: lojaMap, exemplos });
   } catch(err) { next(err); }
 });
 

@@ -153,7 +153,8 @@ function toast(msg,type='info'){const el=document.getElementById('toast');el.tex
 // ── ESTADO ──
 let NOTAS   = [];   // lista resumida das NFs
 let CLONADOS = new Set(JSON.parse(localStorage.getItem('bling_clonados')||'[]'));
-let SIT_SEL  = 'danfe'; // danfe | autorizada | all
+let SIT_SEL  = 'A'; // A = Autorizadas Sem DANFE | all = todas
+let LOJA_SEL = 'all';   // all | ml | shopee
 let DATA_SEL = new Date().toISOString().split('T')[0];
 
 function saveClonados(){ localStorage.setItem('bling_clonados',JSON.stringify([...CLONADOS])); }
@@ -204,11 +205,18 @@ function renderMain(status){
           onchange="DATA_SEL=this.value;carregarNFs()" />
       </div>
       <div class="field">
-        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;">Situação</label>
+        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;">Filtro</label>
         <div style="display:flex;gap:4px;">
-          <button class="sit-btn active" data-sit="danfe" onclick="setSit('danfe')">📄 Emitida DANFE</button>
-          <button class="sit-btn" data-sit="autorizada" onclick="setSit('autorizada')">✅ Autorizada</button>
-          <button class="sit-btn" data-sit="all" onclick="setSit('all')">Todas</button>
+          <button class="sit-btn active" data-sit="A"   onclick="setSit('A')">📄 Sem DANFE</button>
+          <button class="sit-btn"        data-sit="all" onclick="setSit('all')">Todas</button>
+        </div>
+      </div>
+      <div class="field">
+        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;">Loja</label>
+        <div style="display:flex;gap:4px;">
+          <button class="sit-btn active" data-loja="all"    onclick="setLoja('all')">Todas</button>
+          <button class="sit-btn" data-loja="ml"     onclick="setLoja('ml')">⬡ ML</button>
+          <button class="sit-btn" data-loja="shopee" onclick="setLoja('shopee')">🛍️ Shopee</button>
         </div>
       </div>
       <button class="btn btn-ghost btn-sm" style="align-self:flex-end;" onclick="carregarNFs()">⟳</button>
@@ -238,7 +246,7 @@ async function carregarNFs(){
   lista.innerHTML=skeleton(6);
   document.getElementById('countLabel').textContent='';
   try{
-    const d=await api(`/bling/pedidos?data=${DATA_SEL}&situacao=${SIT_SEL}`);
+    const d=await api(`/bling/pedidos?data=${DATA_SEL}&situacao=${SIT_SEL}&loja=${LOJA_SEL}`);
     NOTAS=d.items||[];
     document.getElementById('countLabel').textContent=`${NOTAS.length} NF(s) encontrada(s)`;
     renderLista();
@@ -270,7 +278,7 @@ function cardHtml(nf){
       <div class="nf-hdr" onclick="toggleNF(${nf.id})">
         <div>
           <div class="nf-num">NF ${esc(String(nf.numero||nf.id))}</div>
-          <div class="nf-sub">${esc(nf.dataEmissao||'')} · ${esc(nf.situacao||'')}</div>
+          <div class="nf-sub">${esc(nf.dataEmissao||'')} · ${esc(nf.situacao||'')}${nf.lojaNome?` · ${esc(nf.lojaNome)}`:''}</div>
         </div>
         <div style="min-width:0;">
           <div class="nf-cliente">${esc(nf.cliente?.nome||'Cliente')}</div>
@@ -430,6 +438,12 @@ window.clonarNF=async function(id){
 window.setSit=function(sit){
   SIT_SEL=sit;
   document.querySelectorAll('.sit-btn').forEach(b=>b.classList.toggle('active',b.dataset.sit===sit));
+  carregarNFs();
+};
+
+window.setLoja=function(loja){
+  LOJA_SEL=loja;
+  document.querySelectorAll('[data-loja]').forEach(b=>b.classList.toggle('active',b.dataset.loja===loja));
   carregarNFs();
 };
 
