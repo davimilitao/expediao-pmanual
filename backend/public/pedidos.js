@@ -408,24 +408,21 @@ async function onScan(code) {
     });
 
     if (r && r.ok) {
-      beep(true); flash(true);
-      toast(`✓ ${r.sku}  (${r.checkedQty}/${r.qty})`, 'ok');
-      sc.className = 'scanner-status ready font-mono'; sc.textContent = '● PRONTO';
+      // Garantir que checkedQty e qty são sempre números
+      const chk = Number(r.checkedQty);
+      const qty = Number(r.qty);
 
-      // ── ATUALIZAÇÃO LOCAL IMEDIATA ──────────────────────────────
-      // Atualiza o item diretamente no estado local SEM esperar o servidor.
-      // Isso garante feedback visual instantâneo mesmo com latência do Firestore.
+      beep(true); flash(true);
+      toast(`✓ ${r.sku}  (${chk}/${qty})`, 'ok');
+
+      // Atualiza estado local imediatamente (sem esperar Firestore)
       if (S.selOrder && Array.isArray(S.selOrder.items)) {
-        const it = S.selOrder.items.find(x =>
-          x.sku === r.sku || x.ean === code || x.eanBox === code || x.sku === code
-        );
-        if (it) {
-          it.checkedQty = r.checkedQty; // dado real retornado pelo servidor
-        }
-        renderOrderViewLocal(); // re-renderiza apenas os números/estado, sem recriar tudo
+        const it = S.selOrder.items.find(x => x.sku === r.sku);
+        if (it) it.checkedQty = chk;
+        renderOrderViewLocal();
       }
 
-      // Refresh do servidor em background (silencioso, sem bloquear o scanner)
+      // Refresh em background sem bloquear o scanner
       refreshAll().catch(() => {});
 
     } else if (r) {
@@ -437,12 +434,15 @@ async function onScan(code) {
         not_all_items_checked:    'Confira todos os itens antes de confirmar',
       };
       toast(msgs[r.error] || r.error || 'Erro desconhecido', 'err');
-      sc.className = 'scanner-status ready font-mono'; sc.textContent = '● PRONTO';
     }
   } catch(e) {
     beep(false); flash(false);
     toast(`Erro: ${e.message}`, 'err');
-    sc.className = 'scanner-status ready font-mono'; sc.textContent = '● PRONTO';
+  } finally {
+    // Garante que o scanStatus SEMPRE volta para PRONTO, mesmo em erros
+    sc.className = 'scanner-status ready font-mono';
+    sc.textContent = '● PRONTO';
+    focusScanner();
   }
 }
 

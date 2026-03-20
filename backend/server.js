@@ -1,5 +1,7 @@
-require('dotenv').config();
+// expedicao-pro/backend/server.js
 'use strict';
+
+require('dotenv').config();
 
 const { setupAuthRoutes } = require('./auth');
 const fs = require('fs');
@@ -11,22 +13,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
-
-const cloudinary = require('cloudinary').v2;
-
-// Configuração Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// TESTE DE DIAGNÓSTICO (Apague após funcionar)
-if (!process.env.CLOUDINARY_API_KEY) {
-  console.error('❌ ERRO CRÍTICO: Variável CLOUDINARY_API_KEY não encontrada no sistema!');
-} else {
-  console.log('✅ Chaves do Cloudinary carregadas com sucesso.');
-}
 
 const admin = require('firebase-admin');
 
@@ -88,55 +74,6 @@ app.use(helmet({
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: '6mb' }));
 app.use(morgan('tiny'));
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-// --- INÍCIO DO MOTOR DE TESTE CLOUDINARY ---
-// Usei nomes totalmente novos para não dar erro de "já declarado"
-const multerNuvem = require('multer');
-const storageMemoria = multerNuvem.memoryStorage();
-const uploadParaCloud = multerNuvem({ storage: storageMemoria });
-
-app.post('/admin/save-photo-cloudinary/:sku', uploadParaCloud.single('file'), async (req, res) => {
-  try {
-    const sku = req.params.sku;
-    const kind = req.body.kind; // 'bin', 'stock' ou 'box'
-    if (!req.file) return res.status(400).json({ error: 'Arquivo ausente' });
-
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: `expedicao_fotos/${sku}`, public_id: `${kind}_${Date.now()}` },
-      async (error, result) => {
-        if (error) return res.status(500).json({ error });
-
-        const updateData = { image: result.secure_url, updatedAtMs: Date.now() };
-
-        // Grava no campo específico que o seu admin.html espera ler
-        if (kind === 'bin') {
-          updateData.binPhoto = result.secure_url;
-        } else if (kind === 'stock') {
-          // Adiciona à lista de fotos do produto (Firestore Union)
-          const admin = require('firebase-admin');
-          updateData.stockPhotos = admin.firestore.FieldValue.arrayUnion(result.secure_url);
-        } else if (kind === 'box') {
-          const admin = require('firebase-admin');
-          updateData.boxPhotos = admin.firestore.FieldValue.arrayUnion(result.secure_url);
-        }
-
-        await db.collection('product_overrides').doc(sku).set(updateData, { merge: true });
-        res.json({ ok: true, url: result.secure_url });
-      }
-    );
-    stream.end(req.file.buffer);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// LOG PARA VOCÊ VER NO TERMINAL SE A ROTA SUBIU
-console.log('✅ Rota /admin/save-photo-cloudinary/:sku carregada com sucesso!');
-// --- FIM DO MOTOR DE TESTE ---
-
 setupAuthRoutes(app, db);
 
 // ---------------- Static (public) ----------------
@@ -152,7 +89,6 @@ app.get('/importar', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'importar.
 app.get('/catalogo', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'catalogo.html')));
 app.get('/compras', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'compras.html')));
 app.get('/financas', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'financas.html')));
-app.get('/bling',   (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'bling.html')));
 
 // ✅ uploads locais (fotos reais do estoque)
 const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads');
@@ -593,26 +529,29 @@ app.post('/orders/:id/check', async (req, res, next) => {
         return { ok: false, error: 'already_fully_checked', sku: item.sku };
       }
 
-      // ATUALIZAÇÃO ATÓMICA: Incrementamos o valor e salvamos o array atualizado
-      item.checkedQty = admin.firestore.FieldValue.increment(1);
-      
-      // No Firestore, para incrementar dentro de um array num objeto, 
-      // precisamos atualizar o array inteiro no documento.
-      const newItems = [...items];
-      newItems[idx].checkedQty = (items[idx].checkedQty || 0) + 1;
+      // Incrementa localmente e salva o array inteiro (Firestore não suporta
+      // FieldValue.increment dentro de arrays — precisa ser valor simples)
+      const prevChecked = Number(item.checkedQty || 0);
+      const newChecked  = prevChecked + 1;
+      const itemQty     = Number(item.qty || 0);
 
-      tx.update(orderRef, { 
-        items: newItems, 
-        lockedBy: terminalId, 
-        lockedAt: ts, 
-        updatedAtMs: ts 
-      });
+      const newItems = items.map((it, i) =>
+        i === idx ? { ...it, checkedQty: newChecked } : it
+      );
 
-      return { 
-        ok: true, 
-        sku: item.sku, 
-        checkedQty: newItems[idx].checkedQty, 
-        qty: item.qty 
+      tx.set(orderRef, {
+        items:       newItems,
+        lockedBy:    terminalId,
+        lockedAt:    ts,
+        updatedAtMs: ts,
+      }, { merge: true });
+
+      return {
+        ok:         true,
+        sku:        item.sku,
+        checkedQty: newChecked,   // sempre number
+        qty:        itemQty,      // sempre number
+        allChecked: newChecked >= itemQty,
       };
     });
 
@@ -1229,427 +1168,10 @@ app.post('/api/despesas', async (req, res, next) => {
   }
 });
 
-// ================================================================
-// BLING INTEGRATION
-// ================================================================
-// ================================================================
-// BLING MODULE — colar no server.js ANTES de "// ---------------- Errors"
-// ================================================================
-
-const BLING_CLIENT_ID     = process.env.BLING_CLIENT_ID     || '';
-const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET || '';
-const BLING_REDIRECT_URI  = process.env.BLING_REDIRECT_URI  || '';
-const BLING_TOKEN_URL     = 'https://www.bling.com.br/Api/v3/oauth/token';
-const BLING_AUTH_URL      = 'https://www.bling.com.br/Api/v3/oauth/authorize';
-const BLING_API_BASE      = 'https://www.bling.com.br/Api/v3';
-
-// ── TOKEN HELPERS ─────────────────────────────────────────────────
-async function blingGetToken() {
-  const doc = await db.collection('bling_tokens').doc('main').get();
-  return doc.exists ? doc.data() : null;
-}
-async function blingSaveToken(d) {
-  await db.collection('bling_tokens').doc('main').set({
-    accessToken:  d.access_token,
-    refreshToken: d.refresh_token,
-    expiresAt:    Date.now() + (d.expires_in || 21600) * 1000,
-    updatedAtMs:  Date.now(),
-  }, { merge: true });
-}
-async function blingRefreshToken(refreshToken) {
-  const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
-  const res = await fetch(BLING_TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': `Basic ${creds}` },
-    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
-  });
-  if (!res.ok) throw new Error(`Bling refresh failed: ${res.status}`);
-  return res.json();
-}
-async function blingEnsureToken() {
-  let tok = await blingGetToken();
-  if (!tok) throw new Error('bling_not_authorized');
-  if (Date.now() > tok.expiresAt - 300_000) {
-    const refreshed = await blingRefreshToken(tok.refreshToken);
-    await blingSaveToken(refreshed);
-    tok = await blingGetToken();
-  }
-  return tok.accessToken;
-}
-async function blingFetch(path) {
-  const token = await blingEnsureToken();
-  const res = await fetch(`${BLING_API_BASE}${path}`, {
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-  });
-  if (res.status === 401) throw new Error('bling_not_authorized');
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Bling ${res.status}: ${text.slice(0, 200)}`);
-  return JSON.parse(text);
-}
-
-// Detecta marketplace pelo campo loja ou padrão do nome do cliente
-function detectarMkt(nf) {
-  const loja = (nf.loja?.descricao || nf.loja?.nome || nf.origem?.descricao || '').toLowerCase();
-  const nome = (nf.contato?.nome || '').toLowerCase();
-  if (loja.includes('mercado') || loja.includes('meli') || loja.includes('mlb')) return 'MERCADO_LIVRE';
-  if (loja.includes('shopee')) return 'SHOPEE';
-  // Padrão ML: "Nome Sobrenome (usuario.ml)" — parênteses sem espaço no usuário
-  if (nome.match(/\([a-z0-9._-]+\)$/)) return 'MERCADO_LIVRE';
-  return 'OUTROS';
-}
-
-// ── PÁGINA ────────────────────────────────────────────────────────
-app.get('/bling', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'bling.html')));
-
-// ── STATUS ────────────────────────────────────────────────────────
-app.get('/bling/status', async (req, res) => {
-  const tok = await blingGetToken();
-  if (!tok) return res.json({ authorized: false });
-  res.json({ authorized: true, expired: Date.now() > tok.expiresAt, updatedAtMs: tok.updatedAtMs });
-});
-
-// ── INICIAR OAUTH ─────────────────────────────────────────────────
-app.get('/bling/auth', (req, res) => {
-  if (!BLING_CLIENT_ID) return res.status(500).json({ error: 'BLING_CLIENT_ID não configurado' });
-  const p = new URLSearchParams({ response_type: 'code', client_id: BLING_CLIENT_ID, redirect_uri: BLING_REDIRECT_URI, state: 'expedicao_pro' });
-  res.redirect(`${BLING_AUTH_URL}?${p}`);
-});
-
-// ── CALLBACK OAUTH ────────────────────────────────────────────────
-app.get('/bling/callback', async (req, res) => {
-  const { code, error } = req.query;
-  if (error || !code) return res.redirect('/bling?error=auth_denied');
-  try {
-    const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
-    const tokenRes = await fetch(BLING_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': `Basic ${creds}` },
-      body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: BLING_REDIRECT_URI }).toString(),
-    });
-    if (!tokenRes.ok) { console.error('[bling/callback]', await tokenRes.text()); return res.redirect('/bling?error=token_failed'); }
-    await blingSaveToken(await tokenRes.json());
-    res.redirect('/bling?success=1');
-  } catch(e) { console.error('[bling/callback]', e); res.redirect('/bling?error=callback_error'); }
-});
-
-// ── DESCONECTAR ───────────────────────────────────────────────────
-app.post('/bling/disconnect', async (req, res) => {
-  await db.collection('bling_tokens').doc('main').delete();
-  res.json({ ok: true });
-});
-
-// ── LISTAR PEDIDOS DE VENDA DO DIA (O Espelho Correto) ──
-app.get('/bling/pedidos', async (req, res, next) => {
-  try {
-    // Pega a data YYYY-MM-DD
-    const dataRaw = req.query.data || new Date().toISOString().split('T')[0];
-
-    // No Bling v3, a busca de pedidos usa dataInicial e dataFinal
-    const params = new URLSearchParams({
-      dataInicial: dataRaw,
-      dataFinal:   dataRaw,
-      pagina: Number(req.query.pagina || 1),
-      limite: 100
-    });
-
-    console.log(`[Bling] Buscando Pedidos de Venda para: ${dataRaw}`);
-    const resp = await blingFetch(`/pedidos/vendas?${params}`);
-
-    const items = (resp.data || []).map(p => ({
-      id: p.id,
-      numero: p.numero,
-      dataEmissao: p.data,
-      situacao: p.situacao?.valor || 'N/A', // Em aberto, Atendido, etc
-      cliente: { nome: p.contato?.nome || 'Cliente não identificado' },
-      marketplace: p.loja?.id ? 'Integrado' : 'Manual',
-      valorTotal: p.total || 0,
-      itens: [] // Vazio de propósito, a tela vai buscar depois!
-    }));
-
-    res.json({ items, total: items.length, data: dataRaw });
-  } catch(err) {
-    console.error('[GET /bling/pedidos] Erro:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── DETALHES DE UM PEDIDO DE VENDA (Buscando os itens) ──
-app.get('/bling/pedidos/:id', async (req, res, next) => {
-  try {
-    const resp = await blingFetch(`/pedidos/vendas/${req.params.id}`);
-    const p = resp.data || resp;
-
-    const item = {
-      id: p.id,
-      numero: p.numero,
-      situacao: p.situacao?.valor || '',
-      cliente: { nome: p.contato?.nome || '' },
-      valorTotal: p.total || 0,
-      
-      // Mapeamento CORRIGIDO: Agora o sistema procura o SKU em todos os lugares possíveis do Bling
-      itens: (p.itens || []).map(it => ({
-        sku: (it.codigo || it.produto?.codigo || '').toString().trim(),
-        nome: (it.descricao || it.produto?.descricao || '').toString().trim(),
-        qty: Number(it.quantidade || 1),
-        preco: Number(it.valor || 0)
-      }))
-    };
-
-    res.json({ item });
-  } catch(err) {
-    console.error('[GET /bling/pedidos/:id]', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── DEBUG: ver resposta bruta da API do Bling ────────────────────
-// GET /bling/debug/nfe/:id  (usar id interno do Bling, não o numero da NF)
-// GET /bling/debug/lista?data=2026-03-17  (ver listagem com IDs reais)
-app.get('/bling/debug/nfe/:id', async (req, res, next) => {
-  try {
-    const raw = await blingFetch(`/nfe/${req.params.id}`);
-    res.json(raw);
-  } catch(err) { next(err); }
-});
-// ── SUPER DEBUG: testa múltiplos endpoints e formatos ────────────
-app.get('/bling/debug/probe', async (req, res, next) => {
-  try {
-    const data = req.query.data || '2026-03-17';
-    const [y,m,d] = data.split('-');
-    const dBR  = `${d}/${m}/${y}`; // dd/mm/yyyy
-    const dISO = data;              // yyyy-mm-dd
-    const results = {};
-
-    // Testa 1: /nfe sem filtros (pega as mais recentes)
-    try {
-      const r = await blingFetch('/nfe?pagina=1&limite=3');
-      results.nfe_sem_filtro = { count: r.data?.length, primeiro: r.data?.[0] ? { id: r.data[0].id, numero: r.data[0].numero, data: r.data[0].dataEmissao } : null };
-    } catch(e) { results.nfe_sem_filtro = { erro: e.message }; }
-
-    // Testa 2: /nfe com data BR
-    try {
-      const r = await blingFetch(`/nfe?dataEmissaoInicial=${dBR}&dataEmissaoFinal=${dBR}&pagina=1&limite=3`);
-      results.nfe_data_BR = { count: r.data?.length, query: `${dBR}` };
-    } catch(e) { results.nfe_data_BR = { erro: e.message }; }
-
-    // Testa 3: /nfe com data ISO
-    try {
-      const r = await blingFetch(`/nfe?dataEmissaoInicial=${dISO}&dataEmissaoFinal=${dISO}&pagina=1&limite=3`);
-      results.nfe_data_ISO = { count: r.data?.length, query: `${dISO}` };
-    } catch(e) { results.nfe_data_ISO = { erro: e.message }; }
-
-    // Testa 4: /pedidos/vendas (endpoint alternativo)
-    try {
-      const r = await blingFetch(`/pedidos/vendas?dataInicial=${dBR}&dataFinal=${dBR}&pagina=1&limite=3`);
-      results.pedidos_vendas_BR = { count: r.data?.length };
-    } catch(e) { results.pedidos_vendas_BR = { erro: e.message }; }
-
-    // Testa 5: /pedidos/vendas sem filtro
-    try {
-      const r = await blingFetch('/pedidos/vendas?pagina=1&limite=3');
-      results.pedidos_vendas_sem_filtro = { count: r.data?.length, primeiro: r.data?.[0]?.id };
-    } catch(e) { results.pedidos_vendas_sem_filtro = { erro: e.message }; }
-
-    // Testa 6: ver campos disponíveis de uma NF se achar alguma
-    const qualquerNfe = results.nfe_sem_filtro?.primeiro;
-    if (qualquerNfe?.id) {
-      try {
-        const det = await blingFetch(`/nfe/${qualquerNfe.id}`);
-        const n = det.data || det;
-        results.nfe_detalhe_campos = Object.keys(n);
-        results.nfe_detalhe_itens_campo = n.itens ? `itens[${n.itens.length}]` : 'sem itens direto';
-        results.nfe_primeiro_item = n.itens?.[0] || null;
-      } catch(e) { results.nfe_detalhe = { erro: e.message }; }
-    }
-
-    res.json(results);
-  } catch(err) { next(err); }
-});
-
-app.get('/bling/debug/lista', async (req, res, next) => {
-  try {
-    const data = req.query.data || new Date().toISOString().split('T')[0];
-    const [y,m,d] = data.split('-');
-    const dataBling = `${d}/${m}/${y}`;
-    const raw  = await blingFetch(`/nfe?dataEmissaoInicial=${dataBling}&dataEmissaoFinal=${dataBling}&pagina=1&limite=5`);
-    // Retorna só id e numero para fácil leitura
-    const resumo = (raw.data||[]).map(n => ({ id: n.id, numero: n.numero, contato: n.contato?.nome }));
-    res.json({ resumo, raw_primeiro: raw.data?.[0] || null });
-  } catch(err) { next(err); }
-});
-
-// ── CLONAR NF → CRIAR PEDIDO ─────────────────────────────────────
-app.post('/bling/clonar', async (req, res, next) => {
-  try {
-    const { blingNfId, marketplace, itens, clienteNome, numeroPedido } = req.body;
-
-    if (!itens || !itens.length) return res.status(400).json({ error: 'Nenhum item enviado. Abra os itens da NF antes de clonar.' });
-
-    // Separar itens com e sem SKU
-    const itensComSku = itens.filter(it => safeTrim(it.sku));
-    const itensSemSku = itens.filter(it => !safeTrim(it.sku));
-
-    if (!itensComSku.length) return res.status(400).json({
-      error: 'Nenhum item com SKU encontrado. Verifique se os produtos têm código cadastrado no Bling.',
-      itensSemSku: itensSemSku.map(it => it.nome),
-    });
-
-    // Buscar produtos no Firestore
-    const skus      = itensComSku.map(it => safeTrim(it.sku));
-    const prodRefs  = skus.map(sku => db.collection('products').doc(sku));
-    const prodSnaps = await db.getAll(...prodRefs);
-    const prodMap   = new Map();
-    for (const s of prodSnaps) if (s.exists) prodMap.set(s.id, s.data());
-
-    const cart         = [];
-    const skusFaltando = [];
-
-    for (const it of itensComSku) {
-      const sku = safeTrim(it.sku);
-      const p   = prodMap.get(sku);
-      if (!p) { skusFaltando.push(sku); continue; }
-      cart.push({
-        sku,
-        nameShort:  (p.name || it.nome || sku).slice(0, 48),
-        qty:        Number(it.qty || 1),
-        ean:        p.ean    || '',
-        eanBox:     p.eanBox || '',
-        bin:        p.bin    || '',
-        image:      './assets/placeholder.png',
-        images:     p.images || [],
-        checkedQty: 0,
-      });
-    }
-
-    if (!cart.length) return res.status(400).json({
-      error: 'Nenhum produto encontrado no sistema para os SKUs desta NF.',
-      skusFaltando,
-    });
-
-    // Criar pedido
-    const terminalId  = safeTrim(req.header('x-terminal-id')) || `bling_clone`;
-    const createdAtMs = nowMs();
-    const day         = yyyymmdd();
-    const counterRef  = db.collection('meta').doc(`counters_${day}`);
-
-    const result = await db.runTransaction(async tx => {
-      const cSnap   = await tx.get(counterRef);
-      const seq     = (cSnap.exists ? Number(cSnap.data().seq || 0) : 0) + 1;
-      const orderId = `ORD_${day}_${padSeq(seq, ORDER_SEQ_PAD)}`;
-      tx.set(counterRef, { docType: 'counter', day, seq, updatedAtMs: createdAtMs }, { merge: true });
-      tx.set(db.collection('orders').doc(orderId), {
-        docType:       'order',
-        source:        'bling',
-        blingNfId:     blingNfId   || null,
-        numeroPedido:  numeroPedido || null,
-        marketplace:   marketplace || 'OUTROS',
-        status:        'pending',
-        clienteNome:   safeTrim(clienteNome) || '',
-        isPriority:    false,
-        items:         cart,
-        allowConfirmOnlyIfAllChecked: true,
-        createdAtMs,
-        updatedAtMs:   createdAtMs,
-        lockedBy:      terminalId,
-        lockedAt:      createdAtMs,
-        skusFaltando:  skusFaltando.length ? skusFaltando : null,
-      });
-      return { orderId };
-    });
-
-    res.json({ ok: true, orderId: result.orderId, skusFaltando, itensSemSku: itensSemSku.map(it=>it.nome), cartCount: cart.length });
-  } catch(err) {
-    console.error('[POST /bling/clonar]', err);
-    next(err);
-  }
-});
-
-
 // ---------------- Errors ----------------
 app.use((err, req, res, next) => {
   const status = err.statusCode || 500;
   res.status(status).json({ error: err.message || 'internal_error', status });
-});
-
-// --- ROTA DE TESTE ÚNICO (ISOLADA) ---
-const storageTeste = multer.memoryStorage();
-const uploadTeste = multer({ storage: storageTeste });
-
-app.post('/admin/teste-foto/:sku', uploadTeste.single('file'), async (req, res) => {
-  try {
-    const skuTeste = (req.params.sku || '').toString().trim();
-    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-
-    console.log('[TESTE] Iniciando upload para SKU:', skuTeste);
-
-    // Envio direto para o Cloudinary
-    const streamTeste = cloudinary.uploader.upload_stream(
-      { 
-        folder: `teste_expedicao/${skuTeste}`,
-        public_id: `foto_principal_${Date.now()}`
-      },
-      async (error, result) => {
-        if (error) return res.status(500).json({ error: 'Erro Cloudinary', detail: error });
-
-        const urlFinal = result.secure_url;
-
-        // Grava no Firebase (Coleção de teste para não sujar a original)
-        await db.collection('product_overrides').doc(skuTeste).set({
-          image: urlFinal, // Força a imagem principal
-          stockPhotos: [urlFinal],
-          updatedAtMs: Date.now()
-        }, { merge: true });
-
-        console.log('[TESTE] Sucesso! URL:', urlFinal);
-        res.json({ ok: true, url: urlFinal });
-      }
-    );
-
-    streamTeste.end(req.file.buffer);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// --- ROTA DE EMERGÊNCIA PARA TESTE CLOUDINARY ---
-// Coloque isso no final do arquivo, antes do app.listen
-
-const storageCloudTeste = multer.memoryStorage();
-const uploadCloudTeste = multer({ storage: storageCloudTeste });
-
-app.post('/admin/save-photo-cloudinary/:sku', uploadCloudTeste.single('file'), async (req, res) => {
-  try {
-    const skuAlvo = req.params.sku;
-    if (!req.file) return res.status(400).json({ error: 'Arquivo não enviado' });
-
-    // Usa a configuração do cloudinary que já deve estar no seu topo
-    const stream = cloudinary.uploader.upload_stream(
-      { 
-        folder: `expedicao_fotos/${skuAlvo}`,
-        public_id: `principal_${Date.now()}`
-      },
-      async (error, result) => {
-        if (error) {
-            console.error('Erro Cloudinary:', error);
-            return res.status(500).json({ error: 'Erro no Cloudinary', detail: error });
-        }
-
-        // Salva no Firestore
-        await db.collection('product_overrides').doc(skuAlvo).set({
-          image: result.secure_url,
-          stockPhotos: [result.secure_url],
-          updatedAtMs: Date.now()
-        }, { merge: true });
-
-        res.json({ ok: true, url: result.secure_url });
-      }
-    );
-
-    stream.end(req.file.buffer);
-  } catch (err) {
-    console.error('Erro na Rota:', err);
-    res.status(500).json({ error: err.message });
-  }
 });
 
 app.listen(PORT, () => {
