@@ -1229,6 +1229,20 @@ async function blingFetch(path) {
 }
 
 // Detecta marketplace pelo campo loja ou padrão do nome do cliente
+// Detecta marketplace pelo ID da loja (mais confiável que texto)
+const LOJA_MKT = {
+  '205524457': 'MERCADO_LIVRE',
+  '205920469': 'MERCADO_LIVRE',  // ML Full
+  '205547154': 'SHOPEE',
+  '205744394': 'MAGALU',
+  '205540309': 'TIKTOK',
+  '205570762': 'OUTROS',         // ddbaby
+  '205530029': 'OUTROS',         // Nuvemshop
+};
+function detectarMktPorId(lojaId) {
+  return LOJA_MKT[lojaId] || 'OUTROS';
+}
+
 function detectarMkt(nf) {
   // tipoIntegracao é o campo mais confiável (ex: "Shopee", "Mercado Livre")
   const tipo = (nf.tipoIntegracao || '').toLowerCase();
@@ -1294,7 +1308,7 @@ app.get('/bling/pedidos', async (req, res, next) => {
 
     // A API Bling v3 /nfe ignora filtros de data na listagem.
     // Buscamos tudo e filtramos pelo campo dataEmissao no backend.
-    const situacaoFiltro = req.query.situacao || 'A'; // A = Autorizadas - Sem DANFE // danfe | all | autorizada
+    const situacaoFiltro = req.query.situacao || '5'; // 5 = Autorizada Sem DANFE na API // danfe | all | autorizada
     const params = new URLSearchParams({ pagina, limite: 100 });
 
     const resp  = await blingFetch(`/nfe?${params}`);
@@ -1331,22 +1345,27 @@ app.get('/bling/pedidos', async (req, res, next) => {
 
     console.log(`[bling/pedidos] data=${dataSel} sit=${situacaoFiltro} | total=${notas.length} dia=${notasDia.length} filtrado=${notasFiltradas.length}`);
 
+    // Situações numéricas da API Bling v3 /nfe
+    const SIT_MAP = {
+      1: 'Pendente', 2: 'Emitida DANFE', 3: 'Cancelada',
+      4: 'Denegada', 5: 'Autorizada Sem DANFE', 6: 'Inutilizada', 7: 'Emitida DANFE'
+    };
+
     const items = notasFiltradas.map(n => ({
       id:           n.id,
       numero:       n.numero,
       numeroPedido: n.numeroPedidoLoja || null,
       dataEmissao:  (n.dataEmissao || n.data || '').split(' ')[0],
-      situacao:     n.situacao?.descricao || n.situacao?.nome || '',
+      situacao:     SIT_MAP[Number(n.situacao)] || String(n.situacao || ''),
       cliente:      { nome: n.contato?.nome || '' },
-      lojaNome:     n.loja?.descricao || n.loja?.nome || '',
       lojaId:       String(n.loja?.id || ''),
-      marketplace:  detectarMkt(n),
-      valorTotal:   n.valorNota || n.valorTotal || 0,
-      linkDanfe:    n.linkDanfe  || null,
-      linkPDF:      n.linkPDF    || null,
+      marketplace:  detectarMktPorId(String(n.loja?.id || '')),
+      valorTotal:   null,   // não vem na listagem, carregado no detalhe
+      linkDanfe:    null,
+      linkPDF:      null,
       itens:        [],
       detalhado:    false,
-    }));
+    }));;
 
     res.json({ items, total: items.length, data: dataSel, situacao: situacaoFiltro });
   } catch(err) {

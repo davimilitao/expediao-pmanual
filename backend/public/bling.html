@@ -153,7 +153,7 @@ function toast(msg,type='info'){const el=document.getElementById('toast');el.tex
 // ── ESTADO ──
 let NOTAS   = [];   // lista resumida das NFs
 let CLONADOS = new Set(JSON.parse(localStorage.getItem('bling_clonados')||'[]'));
-let SIT_SEL  = 'A'; // A = Autorizadas Sem DANFE | all = todas
+let SIT_SEL  = '5'; // 5=Autorizada Sem DANFE // A = Autorizadas Sem DANFE | all = todas
 let LOJA_SEL = 'all';   // all | ml | shopee
 let DATA_SEL = new Date().toISOString().split('T')[0];
 
@@ -207,7 +207,8 @@ function renderMain(status){
       <div class="field">
         <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;">Filtro</label>
         <div style="display:flex;gap:4px;">
-          <button class="sit-btn active" data-sit="A"   onclick="setSit('A')">📄 Sem DANFE</button>
+          <button class="sit-btn active" data-sit="5"   onclick="setSit('5')">📄 Sem DANFE</button>
+          <button class="sit-btn"        data-sit="7"   onclick="setSit('7')">🖨️ Emitida DANFE</button>
           <button class="sit-btn"        data-sit="all" onclick="setSit('all')">Todas</button>
         </div>
       </div>
@@ -272,9 +273,17 @@ function renderLista(){
 
 function cardHtml(nf){
   const clonado=CLONADOS.has(String(nf.id));
-  const mktCls =nf.marketplace==='MERCADO_LIVRE'?'mkt-ml':nf.marketplace==='SHOPEE'?'mkt-shop':'mkt-other';
-  const mktLbl =nf.marketplace==='MERCADO_LIVRE'?'ML':nf.marketplace==='SHOPEE'?'SHOPEE':'OUTROS';
-  const valor  =Number(nf.valorTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const MKT_LABELS = {
+    'MERCADO_LIVRE': { cls:'mkt-ml',    lbl:'⬡ ML'     },
+    'SHOPEE':        { cls:'mkt-shop',  lbl:'🛍 Shopee' },
+    'MAGALU':        { cls:'mkt-other', lbl:'🛒 Magalu'  },
+    'TIKTOK':        { cls:'mkt-other', lbl:'🎵 TikTok'  },
+    'OUTROS':        { cls:'mkt-other', lbl:'OUTROS'    },
+  };
+  const mkt    = MKT_LABELS[nf.marketplace] || MKT_LABELS['OUTROS'];
+  const mktCls = mkt.cls;
+  const mktLbl = mkt.lbl;
+  const valor  = nf.valorTotal ? Number(nf.valorTotal).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : null;
 
   return `
     <div class="nf-card${clonado?' clonado':''}" id="nf-${nf.id}">
@@ -287,7 +296,7 @@ function cardHtml(nf){
           <div class="nf-cliente">${esc(nf.cliente?.nome||'Cliente')}</div>
         </div>
         <span class="mkt ${mktCls}">${mktLbl}</span>
-        <span class="nf-valor">${valor}</span>
+        ${nf.valorTotal ? `<span class="nf-valor">${valor}</span>` : ''}
         <span class="nf-chevron" id="chev-${nf.id}">▾</span>
       </div>
       <div class="nf-body" id="body-${nf.id}">
