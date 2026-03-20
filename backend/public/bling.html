@@ -83,6 +83,16 @@
       padding:16px;text-align:center;font-size:12px;
       color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:8px;
     }
+    .sit-btn {
+      padding: 7px 12px; background: var(--depth-4); border: 1px solid var(--border-default);
+      border-radius: var(--r-sm); cursor: pointer; font-family: var(--font-body);
+      font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      transition: all var(--transition-fast);
+    }
+    .sit-btn:hover { background: var(--depth-5); color: var(--text-primary); }
+    .sit-btn.active { background: rgba(59,130,246,.12); color: var(--accent-blue); border-color: rgba(59,130,246,.3); }
+    .sit-btn[data-sit="danfe"].active { background: rgba(16,185,129,.12); color: var(--accent-green); border-color: rgba(16,185,129,.3); }
+
     @keyframes spin{to{transform:rotate(360deg);}}
     .spin{display:inline-block;animation:spin .8s linear infinite;}
 
@@ -143,6 +153,7 @@ function toast(msg,type='info'){const el=document.getElementById('toast');el.tex
 // ── ESTADO ──
 let NOTAS   = [];   // lista resumida das NFs
 let CLONADOS = new Set(JSON.parse(localStorage.getItem('bling_clonados')||'[]'));
+let SIT_SEL  = 'danfe'; // danfe | autorizada | all
 let DATA_SEL = new Date().toISOString().split('T')[0];
 
 function saveClonados(){ localStorage.setItem('bling_clonados',JSON.stringify([...CLONADOS])); }
@@ -192,8 +203,16 @@ function renderMain(status){
           style="background:var(--depth-4);border:1px solid var(--border-default);border-radius:var(--r-md);padding:8px 12px;color:var(--text-primary);font-family:var(--font-body);font-size:13px;outline:none;"
           onchange="DATA_SEL=this.value;carregarNFs()" />
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="carregarNFs()">⟳ Atualizar</button>
-      <div style="margin-left:auto;font-size:12px;color:var(--text-muted);" id="countLabel"></div>
+      <div class="field">
+        <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;">Situação</label>
+        <div style="display:flex;gap:4px;">
+          <button class="sit-btn active" data-sit="danfe" onclick="setSit('danfe')">📄 Emitida DANFE</button>
+          <button class="sit-btn" data-sit="autorizada" onclick="setSit('autorizada')">✅ Autorizada</button>
+          <button class="sit-btn" data-sit="all" onclick="setSit('all')">Todas</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="align-self:flex-end;" onclick="carregarNFs()">⟳</button>
+      <div style="margin-left:auto;font-size:12px;color:var(--text-muted);align-self:flex-end;" id="countLabel"></div>
     </div>
 
     <div id="listaNFs" style="display:flex;flex-direction:column;gap:8px;">
@@ -219,7 +238,7 @@ async function carregarNFs(){
   lista.innerHTML=skeleton(6);
   document.getElementById('countLabel').textContent='';
   try{
-    const d=await api(`/bling/pedidos?data=${DATA_SEL}`);
+    const d=await api(`/bling/pedidos?data=${DATA_SEL}&situacao=${SIT_SEL}`);
     NOTAS=d.items||[];
     document.getElementById('countLabel').textContent=`${NOTAS.length} NF(s) encontrada(s)`;
     renderLista();
@@ -266,11 +285,17 @@ function cardHtml(nf){
         </div>
         <div class="nf-footer" id="footer-${nf.id}">
           ${clonado
-            ?`<span class="clonado-tag">✓ Já criado no sistema</span><a href="/pedidos" class="btn btn-ghost btn-sm">Ver fila →</a>`
-            :`<span style="font-size:11px;color:var(--text-muted);">Abra os itens para habilitar</span>
-              <button class="btn btn-primary btn-sm" disabled id="btn-clonar-${nf.id}" onclick="clonarNF(${nf.id})">
-                📥 Criar na Expedição
-              </button>`
+            ?`<span class="clonado-tag">✓ Já criado no sistema</span>
+              <a href="/pedidos" class="btn btn-ghost btn-sm">Ver fila →</a>`
+            :`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1;">
+                ${nf.linkDanfe||nf.linkPDF
+                  ?`<a href="${nf.linkDanfe||nf.linkPDF}" target="_blank" class="btn btn-ghost btn-sm">🖨️ DANFE</a>`
+                  :''}
+                <span style="font-size:11px;color:var(--text-muted);flex:1;" id="hint-${nf.id}">Abra para habilitar</span>
+                <button class="btn btn-primary btn-sm" disabled id="btn-clonar-${nf.id}" onclick="clonarNF(${nf.id})">
+                  📥 Criar na Expedição
+                </button>
+              </div>`
           }
         </div>
       </div>
@@ -400,6 +425,12 @@ window.clonarNF=async function(id){
     toast(`Erro: ${e.message}`,'error');
     if(btn){ btn.disabled=false; btn.textContent='📥 Criar na Expedição'; }
   }
+};
+
+window.setSit=function(sit){
+  SIT_SEL=sit;
+  document.querySelectorAll('.sit-btn').forEach(b=>b.classList.toggle('active',b.dataset.sit===sit));
+  carregarNFs();
 };
 
 window.desconectar=async function(){

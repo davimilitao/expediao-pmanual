@@ -1289,22 +1289,37 @@ app.get('/bling/pedidos', async (req, res, next) => {
 
     // A API Bling v3 /nfe ignora filtros de data na listagem.
     // Buscamos tudo e filtramos pelo campo dataEmissao no backend.
+    const situacaoFiltro = req.query.situacao || 'danfe'; // danfe | all | autorizada
     const params = new URLSearchParams({ pagina, limite: 100 });
 
-    const resp      = await blingFetch(`/nfe?${params}`);
-    const notas     = resp.data || [];
+    const resp  = await blingFetch(`/nfe?${params}`);
+    const notas = resp.data || [];
 
-    // dataEmissao vem como "2026-03-20 14:01:10" — pegar só yyyy-mm-dd
-    const notasDia  = dataSel === 'all'
+    // Filtrar por data
+    const notasDia = dataSel === 'all'
       ? notas
       : notas.filter(n => {
           const d = (n.dataEmissao || n.data || '').split(' ')[0];
           return d === dataSel;
         });
 
-    console.log(`[bling/pedidos] total=${notas.length} filtrado=${notasDia.length} data=${dataSel}`);
+    // Filtrar por situação
+    // "Emitida DANFE" = pronta para imprimir e enviar (fluxo operacional principal)
+    const SITUACOES = {
+      danfe:      s => s.toLowerCase().includes('danfe'),
+      autorizada: s => s.toLowerCase().includes('autorizada'),
+      all:        s => true,
+    };
+    const matchSit = SITUACOES[situacaoFiltro] || SITUACOES.all;
 
-    const items = notasDia.map(n => ({
+    const notasFiltradas = notasDia.filter(n => {
+      const sit = n.situacao?.descricao || n.situacao?.nome || '';
+      return matchSit(sit);
+    });
+
+    console.log(`[bling/pedidos] data=${dataSel} sit=${situacaoFiltro} | total=${notas.length} dia=${notasDia.length} filtrado=${notasFiltradas.length}`);
+
+    const items = notasFiltradas.map(n => ({
       id:           n.id,
       numero:       n.numero,
       numeroPedido: n.numeroPedidoLoja || null,
@@ -1313,11 +1328,13 @@ app.get('/bling/pedidos', async (req, res, next) => {
       cliente:      { nome: n.contato?.nome || '' },
       marketplace:  detectarMkt(n),
       valorTotal:   n.valorNota || n.valorTotal || 0,
+      linkDanfe:    n.linkDanfe  || null,
+      linkPDF:      n.linkPDF    || null,
       itens:        [],
       detalhado:    false,
     }));
 
-    res.json({ items, total: items.length, data: dataSel });
+    res.json({ items, total: items.length, data: dataSel, situacao: situacaoFiltro });
   } catch(err) {
     if (err.message === 'bling_not_authorized') return res.status(401).json({ error: 'bling_not_authorized' });
     console.error('[GET /bling/pedidos]', err);
