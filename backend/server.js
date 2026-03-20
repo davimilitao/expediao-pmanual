@@ -1284,50 +1284,46 @@ app.post('/bling/disconnect', async (req, res) => {
 // Retorna resumo das NFs — itens são carregados sob demanda via /bling/pedidos/:id
 app.get('/bling/pedidos', async (req, res, next) => {
   try {
-    const data   = req.query.data || new Date().toISOString().split('T')[0];
-    const pagina = Number(req.query.pagina || 1);
+    const dataSel = req.query.data || new Date().toISOString().split('T')[0];
+    const pagina  = Number(req.query.pagina || 1);
 
-    // Bling v3 usa dd/mm/yyyy, não yyyy-mm-dd
-    const [y, m, d] = data.split('-');
-    const dataBling = `${d}/${m}/${y}`;
+    // A API Bling v3 /nfe ignora filtros de data na listagem.
+    // Buscamos tudo e filtramos pelo campo dataEmissao no backend.
+    const params = new URLSearchParams({ pagina, limite: 100 });
 
-    const params = new URLSearchParams({
-      dataEmissaoInicial: dataBling,
-      dataEmissaoFinal:   dataBling,
-      pagina,
-      limite: 100,
-    });
+    const resp      = await blingFetch(`/nfe?${params}`);
+    const notas     = resp.data || [];
 
-    console.log(`[bling/pedidos] buscando NFs data=${dataBling} params=${params.toString()}`);
-    const resp  = await blingFetch(`/nfe?${params}`);
-    console.log(`[bling/pedidos] resp keys:`, Object.keys(resp), '| data length:', resp.data?.length ?? 'null');
-    const notas = resp.data || [];
+    // dataEmissao vem como "2026-03-20 14:01:10" — pegar só yyyy-mm-dd
+    const notasDia  = dataSel === 'all'
+      ? notas
+      : notas.filter(n => {
+          const d = (n.dataEmissao || n.data || '').split(' ')[0];
+          return d === dataSel;
+        });
 
-    const items = notas.map(n => ({
-      id:          n.id,
-      numero:      n.numero,
-      numeroPedido: null,           // carregado sob demanda
-      dataEmissao: n.dataEmissao,
-      situacao:    n.situacao?.descricao || '',
-      cliente:     { nome: n.contato?.nome || '' },
-      marketplace: detectarMkt(n),
-      valorTotal:  n.valorTotal || 0,
-      itens:       [],              // carregados sob demanda
-      detalhado:   false,
+    console.log(`[bling/pedidos] total=${notas.length} filtrado=${notasDia.length} data=${dataSel}`);
+
+    const items = notasDia.map(n => ({
+      id:           n.id,
+      numero:       n.numero,
+      numeroPedido: n.numeroPedidoLoja || null,
+      dataEmissao:  (n.dataEmissao || n.data || '').split(' ')[0],
+      situacao:     n.situacao?.descricao || n.situacao?.nome || '',
+      cliente:      { nome: n.contato?.nome || '' },
+      marketplace:  detectarMkt(n),
+      valorTotal:   n.valorNota || n.valorTotal || 0,
+      itens:        [],
+      detalhado:    false,
     }));
 
-    // LOG: mostra IDs internos do Bling para diagnóstico
-    if (items.length > 0) {
-      console.log('[bling/pedidos] IDs internos:', items.slice(0,3).map(i => `NF${i.numero}=id:${i.id}`).join(', '));
-    }
-    res.json({ items, total: items.length, data });
+    res.json({ items, total: items.length, data: dataSel });
   } catch(err) {
     if (err.message === 'bling_not_authorized') return res.status(401).json({ error: 'bling_not_authorized' });
     console.error('[GET /bling/pedidos]', err);
     next(err);
   }
 });
-
 // ── DETALHES DE UMA NF (com itens) ───────────────────────────────
 // GET /bling/pedidos/:id
 app.get('/bling/pedidos/:id', async (req, res, next) => {
@@ -1353,12 +1349,17 @@ app.get('/bling/pedidos/:id', async (req, res, next) => {
       valorTotal:   n.valorTotal || n.totalProdutos || 0,
       detalhado:    true,
       // Tenta todos os campos possíveis onde o Bling pode colocar os itens
-      itens: (n.itens || n.produtos || n.items || []).map(it => ({
-        sku:   safeTrim(it.codigo || it.sku || it.produto?.codigo || it.codigoProduto || ''),
-        nome:  safeTrim(it.descricao || it.nome || it.produto?.descricao || it.nomeProduto || ''),
-        qty:   Number(it.quantidade || it.qty || it.qtd || 1),
-        preco: Number(it.valor || it.valorUnitario || it.preco || 0),
-      })),
+      // Mapeamento correto baseado na estrutura real da API Bling v3
+      // Campos confirmados: codigo, descricao, quantidade, valor, gtin, tipo
+      itens: (n.itens || [])
+        .filter(it => it.tipo === 'P' || !it.tipo) // só produtos, não serviços
+        .map(it => ({
+          sku:   safeTrim(it.codigo  || ''),
+          nome:  safeTrim(it.descricao || ''),
+          qty:   Number(it.quantidade ?? 1),
+          preco: Number(it.valor ?? 0),
+          ean:   safeTrim(it.gtin || ''),
+        })),
     };
 
     res.json({ item });
