@@ -90,6 +90,7 @@ app.get('/catalogo', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'catalogo.
 app.get('/compras', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'compras.html')));
 app.get('/financas', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'financas.html')));
 app.get('/bling',   (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'bling.html')));
+app.get('/config',  (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'config.html')));
 
 // ✅ uploads locais (fotos reais do estoque)
 const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads');
@@ -1617,6 +1618,128 @@ app.post('/bling/clonar', async (req, res, next) => {
   }
 });
 
+
+
+// ═══════════════════════════════════════════════════════════════════
+// API PERFIS — gestão de módulos e temas por perfil
+// Collection: "perfis" | doc: role (admin, operacao, financeiro, etc)
+// ═══════════════════════════════════════════════════════════════════
+
+// Perfis padrão caso o Firestore não tenha
+const PERFIS_DEFAULT = {
+  admin:      { nome: 'Super Admin', avatar: 'DA', tema: 'dark',  modulos: ['pedidos','manual','bling','admin','catalogo','embalagens','financas','compras','importar','index','config'] },
+  operacao:   { nome: 'Operação',    avatar: 'SU', tema: 'dark',  modulos: ['pedidos','manual','bling','embalagens','index'] },
+  financeiro: { nome: 'Financeiro',  avatar: 'JE', tema: 'dark',  modulos: ['financas','compras','index'] },
+  catalogo:   { nome: 'Catálogo',    avatar: 'DN', tema: 'dark',  modulos: ['admin','catalogo','embalagens','compras','index'] },
+  vendas:     { nome: 'Vendas',      avatar: 'VE', tema: 'light', modulos: ['catalogo','index'] },
+};
+
+// GET /api/perfis — lista todos os perfis
+app.get('/api/perfis', async (req, res, next) => {
+  try {
+    const snap = await db.collection('perfis').get();
+    const perfis = {};
+    // Começa com os defaults
+    for (const [k, v] of Object.entries(PERFIS_DEFAULT)) {
+      perfis[k] = { id: k, ...v };
+    }
+    // Sobrescreve com dados do Firestore
+    snap.forEach(doc => {
+      perfis[doc.id] = { id: doc.id, ...PERFIS_DEFAULT[doc.id], ...doc.data() };
+    });
+    res.json({ perfis: Object.values(perfis) });
+  } catch(err) {
+    console.error('[GET /api/perfis]', err);
+    next(err);
+  }
+});
+
+// GET /api/perfis/:id — um perfil específico (usado pelo menu.js)
+app.get('/api/perfis/:id', async (req, res, next) => {
+  try {
+    const id  = req.params.id;
+    const doc = await db.collection('perfis').doc(id).get();
+    const def = PERFIS_DEFAULT[id] || PERFIS_DEFAULT.admin;
+    if (!doc.exists) {
+      return res.json({ id, ...def });
+    }
+    res.json({ id, ...def, ...doc.data() });
+  } catch(err) {
+    next(err);
+  }
+});
+
+// PUT /api/perfis/:id — salvar configurações de um perfil
+app.put('/api/perfis/:id', async (req, res, next) => {
+  try {
+    const id   = req.params.id;
+    const data = req.body;
+
+    // Validar campos permitidos
+    const allowed = ['nome', 'tema', 'modulos', 'avatar', 'cor'];
+    const clean   = {};
+    for (const k of allowed) {
+      if (data[k] !== undefined) clean[k] = data[k];
+    }
+
+    // Validar tema
+    const temasValidos = ['dark','light','hc','ml'];
+    if (clean.tema && !temasValidos.includes(clean.tema)) {
+      return res.status(400).json({ error: 'Tema inválido' });
+    }
+
+    // Validar módulos
+    const modulosValidos = ['pedidos','manual','bling','admin','catalogo','embalagens','financas','compras','importar','index','config'];
+    if (clean.modulos) {
+      clean.modulos = clean.modulos.filter(m => modulosValidos.includes(m));
+    }
+
+    clean.updatedAtMs = Date.now();
+    await db.collection('perfis').doc(id).set(clean, { merge: true });
+    res.json({ ok: true, id, ...clean });
+  } catch(err) {
+    console.error('[PUT /api/perfis/:id]', err);
+    next(err);
+  }
+});
+
+// POST /api/perfis — criar novo perfil customizado
+app.post('/api/perfis', async (req, res, next) => {
+  try {
+    const { id, nome, tema, modulos } = req.body;
+    if (!id || !nome) return res.status(400).json({ error: 'id e nome obrigatórios' });
+
+    const temasValidos   = ['dark','light','hc','ml'];
+    const modulosValidos = ['pedidos','manual','bling','admin','catalogo','embalagens','financas','compras','importar','index','config'];
+
+    const data = {
+      nome,
+      tema:      temasValidos.includes(tema) ? tema : 'dark',
+      modulos:   (modulos || []).filter(m => modulosValidos.includes(m)),
+      avatar:    req.body.avatar || id.slice(0,2).toUpperCase(),
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+    };
+
+    await db.collection('perfis').doc(id).set(data);
+    res.json({ ok: true, id, ...data });
+  } catch(err) {
+    console.error('[POST /api/perfis]', err);
+    next(err);
+  }
+});
+
+// DELETE /api/perfis/:id — remover perfil (não permite deletar admin)
+app.delete('/api/perfis/:id', async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (id === 'admin') return res.status(403).json({ error: 'Não é possível remover o perfil admin' });
+    await db.collection('perfis').doc(id).delete();
+    res.json({ ok: true });
+  } catch(err) {
+    next(err);
+  }
+});
 
 // ---------------- Errors ----------------
 app.use((err, req, res, next) => {

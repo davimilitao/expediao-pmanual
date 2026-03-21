@@ -247,6 +247,7 @@ input, select, textarea { font-family: var(--font-body); }
    ══════════════════════════════════════════════════════════ */
 .erp-layout {
   display: flex;
+  flex-direction: row;
   min-height: 100vh;
   background: var(--depth-0);
 }
@@ -408,59 +409,16 @@ input, select, textarea { font-family: var(--font-body); }
 }
 .erp-sidebar.collapsed .nav-item-badge { opacity: 0; }
 
-/* ── TOOLTIP RICO (hover no collapsed) ─────────────────────
-   Aparece à direita do ícone com delay de 300ms
+/* ── TOOLTIP: gerado via JS (menu.js) ───────────────────────
+   Nenhuma regra CSS necessária — tooltip é div appended ao body
    ─────────────────────────────────────────────────────────── */
-.erp-sidebar.collapsed .nav-item {
-  position: relative;
+@keyframes tooltip-in {
+  from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 
-.erp-sidebar.collapsed .nav-item .nav-tooltip {
-  position: fixed;
-  left: calc(var(--sidebar-w-collapsed) + 8px);
-  top: 50%;
-  transform: translateY(-50%) translateX(-6px);
-  background: var(--tooltip-bg, var(--depth-5));
-  color: var(--text-primary);
-  font-size: 12px; font-weight: 600;
-  padding: 7px 12px;
-  border-radius: var(--r-md);
-  white-space: nowrap;
-  pointer-events: none;
-  border: 1px solid var(--tooltip-border, var(--border-default));
-  box-shadow: var(--shadow-md);
-  z-index: 1000;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  display: flex; align-items: center; gap: 8px;
-}
-
-/* Seta do tooltip */
-.erp-sidebar.collapsed .nav-item .nav-tooltip::before {
-  content: '';
-  position: absolute;
-  right: 100%;
-  top: 50%; transform: translateY(-50%);
-  border: 5px solid transparent;
-  border-right-color: var(--tooltip-border, var(--border-default));
-}
-
-.erp-sidebar.collapsed .nav-item:hover .nav-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
-  transition-delay: 0.25s;
-}
-
-/* Tooltip icon */
-.nav-tooltip-icon { font-size: 14px; }
-.nav-tooltip-label { font-family: var(--font-body); }
-.nav-tooltip-section {
-  font-size: 9px; font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 1px;
-}
+/* Garantir que nav-item não crie overflow quando collapsed */
+.erp-sidebar.collapsed .nav-item { position: relative; overflow: visible; }
 
 /* Divisor */
 .nav-divider {
@@ -522,6 +480,8 @@ input, select, textarea { font-family: var(--font-body); }
 .erp-main {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   background: var(--main-bg, var(--depth-2));
@@ -1002,47 +962,60 @@ input, select, textarea { font-family: var(--font-body); }
 }
 .mobile-topbar-actions { display: flex; gap: 6px; margin-left: auto; }
 
+/* Mobile: sidebar como drawer, conteúdo ocupa 100% */
 @media (max-width: 768px) {
   .mobile-topbar { display: flex; }
 
-  /* Sidebar vira drawer fixo */
+  /* Remove sidebar do fluxo — drawer fixo fora da tela */
   .erp-sidebar {
-    position: fixed;
+    position: fixed !important;
     top: 0; left: 0; bottom: 0;
     z-index: 200;
-    width: var(--sidebar-w) !important; /* sempre expandido quando abre */
+    width: var(--sidebar-w) !important;
     transform: translateX(-100%);
     transition: transform var(--sidebar-transition);
     box-shadow: var(--shadow-lg);
+    height: 100dvh; /* dynamic viewport height */
   }
   .erp-sidebar.mobile-open {
     transform: translateX(0);
   }
-  /* Esconde toggle desktop no mobile */
-  .sidebar-toggle { display: none; }
 
-  /* Main sem padding esquerdo */
-  .erp-main { min-height: calc(100vh - 52px); }
-  .page-header  { padding: 16px 16px 12px; }
-  .page-content { padding: 4px 16px 24px; }
+  /* Layout: main ocupa tudo (sidebar foi removida do fluxo) */
+  .erp-layout {
+    flex-direction: column;
+  }
+  .erp-main {
+    width: 100%;
+    min-height: calc(100dvh - 52px);
+    padding-top: 0;
+  }
 
-  /* Grids colapsam */
+  /* Esconde elementos só-desktop */
+  .sidebar-toggle { display: none !important; }
+
+  /* Espaçamentos menores */
+  .page-header  { padding: 14px 16px 10px; }
+  .page-content { padding: 4px 16px 20px; }
+
+  /* Grids colapsam para 1 coluna */
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
 
-  /* Stat cards em 2 colunas */
-  .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-  /* Page title menor */
-  .page-title { font-size: 18px; }
+  /* Tipografia mobile */
+  .page-title   { font-size: 18px; }
+  .page-subtitle { font-size: 11px; }
 }
 
 @media (min-width: 769px) {
-  .mobile-topbar { display: none; }
+  .mobile-topbar  { display: none !important; }
+  /* Desktop: sidebar sticky no fluxo normal */
+  .erp-sidebar { position: sticky !important; top: 0; transform: none !important; }
 }
 
-/* Tablet — sidebar recolhida por padrão */
-@media (min-width: 769px) and (max-width: 1024px) {
-  :root { --sidebar-w: 200px; }
+/* Tablet — sidebar ligeiramente menor */
+@media (min-width: 769px) and (max-width: 1100px) {
+  :root { --sidebar-w: 210px; }
 }
 
 /* ══════════════════════════════════════════════════════════

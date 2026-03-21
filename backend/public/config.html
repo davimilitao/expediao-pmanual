@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>Configurações — Expedição Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/erp.css" />
+  <style>
+    /* ── LAYOUT CONFIG ── */
+    .config-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .config-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── PERFIL CARD (lista esquerda) ── */
+    .perfil-card {
+      background: var(--depth-3);
+      border: 1px solid var(--border-default);
+      border-radius: var(--r-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: flex; align-items: center; gap: 12px;
+      position: relative;
+    }
+    .perfil-card:hover { background: var(--depth-4); border-color: var(--border-strong); }
+    .perfil-card.selected {
+      border-color: var(--accent-blue);
+      background: rgba(59,130,246,.07);
+    }
+    .perfil-card.selected::before {
+      content: '';
+      position: absolute; left: 0; top: 15%; bottom: 15%;
+      width: 3px; background: var(--accent-blue);
+      border-radius: 0 var(--r-full) var(--r-full) 0;
+    }
+    .perfil-avatar-big {
+      width: 38px; height: 38px;
+      border-radius: var(--r-full);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #fff;
+      font-family: var(--font-display); flex-shrink: 0;
+    }
+    .perfil-info { flex: 1; min-width: 0; }
+    .perfil-name { font-weight: 700; font-size: 14px; }
+    .perfil-sub  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .perfil-tema-badge {
+      font-size: 9px; font-weight: 700; padding: 2px 7px;
+      border-radius: var(--r-full); background: var(--depth-5);
+      color: var(--text-muted); border: 1px solid var(--border-default);
+      flex-shrink: 0;
+    }
+
+    /* ── PAINEL DIREITO ── */
+    .config-panel {
+      background: var(--depth-3);
+      border: 1px solid var(--border-default);
+      border-radius: var(--r-xl);
+      overflow: hidden;
+    }
+    .config-panel-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center; gap: 14px;
+    }
+    .config-panel-body { padding: 24px; display: flex; flex-direction: column; gap: 28px; }
+
+    /* ── SEÇÃO ── */
+    .config-section {}
+    .config-section-title {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.6px;
+      color: var(--text-muted); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .config-section-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+    }
+
+    /* ── TEMA PICKER ── */
+    .tema-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    @media (max-width: 700px) { .tema-grid { grid-template-columns: 1fr 1fr; } }
+
+    .tema-option {
+      border: 2px solid var(--border-default);
+      border-radius: var(--r-lg);
+      padding: 12px 10px;
+      cursor: pointer; text-align: center;
+      transition: all var(--transition-fast);
+      background: var(--depth-4);
+      position: relative;
+    }
+    .tema-option:hover { border-color: var(--border-strong); }
+    .tema-option.selected { border-color: var(--accent-blue); background: rgba(59,130,246,.08); }
+    .tema-option.selected::after {
+      content: '✓';
+      position: absolute; top: 6px; right: 8px;
+      font-size: 10px; font-weight: 800; color: var(--accent-blue);
+    }
+    .tema-preview {
+      height: 40px; border-radius: var(--r-sm);
+      margin-bottom: 8px; overflow: hidden;
+      display: flex;
+    }
+    .tema-preview-sidebar { width: 30%; }
+    .tema-preview-content { flex: 1; }
+    .tema-icon  { font-size: 18px; margin-bottom: 4px; }
+    .tema-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+
+    /* Cores de preview */
+    .preview-dark   .tema-preview-sidebar  { background: #0d1117; }
+    .preview-dark   .tema-preview-content  { background: #111827; }
+    .preview-light  .tema-preview-sidebar  { background: #ffffff; border-right: 1px solid #e4e7ed; }
+    .preview-light  .tema-preview-content  { background: #f5f7fa; }
+    .preview-hc     .tema-preview-sidebar  { background: #0a0a0a; }
+    .preview-hc     .tema-preview-content  { background: #0f0f0f; }
+    .preview-ml     .tema-preview-sidebar  { background: #fff8e0; border-right: 1px solid #fdeea0; }
+    .preview-ml     .tema-preview-content  { background: #fffbf0; }
+
+    /* ── MÓDULOS GRID ── */
+    .modulos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .modulo-toggle {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border-default);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      background: var(--depth-4);
+      user-select: none;
+    }
+    .modulo-toggle:hover { border-color: var(--border-strong); }
+    .modulo-toggle.on {
+      border-color: rgba(16,185,129,.3);
+      background: rgba(16,185,129,.06);
+    }
+    .modulo-icon { font-size: 16px; flex-shrink: 0; }
+    .modulo-label { font-size: 12px; font-weight: 600; flex: 1; min-width: 0; }
+    .modulo-section { font-size: 9px; color: var(--text-muted); }
+
+    /* Toggle switch */
+    .toggle-switch {
+      width: 32px; height: 18px;
+      background: var(--depth-5);
+      border-radius: var(--r-full);
+      position: relative; flex-shrink: 0;
+      transition: background var(--transition-fast);
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: all var(--transition-fast);
+    }
+    .modulo-toggle.on .toggle-switch {
+      background: rgba(16,185,129,.3);
+    }
+    .modulo-toggle.on .toggle-switch::after {
+      left: calc(100% - 16px);
+      background: var(--accent-green);
+    }
+
+    /* ── AÇÕES SALVAR ── */
+    .config-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex; align-items: center; gap: 10px;
+      background: var(--depth-4);
+    }
+    .save-status {
+      font-size: 12px; color: var(--text-muted);
+      flex: 1;
+      transition: color var(--transition-fast);
+    }
+    .save-status.saved  { color: var(--accent-green); }
+    .save-status.saving { color: var(--accent-yellow); }
+    .save-status.error  { color: var(--accent-red); }
+
+    /* ── NOVO PERFIL ── */
+    .novo-perfil-form {
+      background: var(--depth-4);
+      border: 1px dashed var(--border-default);
+      border-radius: var(--r-lg);
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .novo-perfil-form.hidden { display: none; }
+    .campo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── CORES AVATAR ── */
+    .cor-grid { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cor-dot {
+      width: 24px; height: 24px; border-radius: 50%;
+      cursor: pointer; border: 2px solid transparent;
+      transition: all var(--transition-fast);
+    }
+    .cor-dot.selected { border-color: var(--text-primary); transform: scale(1.2); }
+
+    /* ── EMPTY STATE ── */
+    .empty-panel {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 60px 20px; gap: 12px;
+      color: var(--text-muted); text-align: center;
+    }
+    .empty-panel-icon { font-size: 40px; opacity: .2; }
+  </style>
+</head>
+<body>
+<div class="erp-layout">
+  <div id="sidebar-placeholder"></div>
+
+  <main class="erp-main">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">⚙️ Configurações</h1>
+        <p class="page-subtitle">Gerencie perfis, módulos e temas de cada usuário</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-ghost btn-sm" onclick="toggleNovoForm()">+ Novo Perfil</button>
+        <button class="btn btn-ghost btn-sm" onclick="carregarPerfis()">⟳</button>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- FORM NOVO PERFIL -->
+      <div class="novo-perfil-form hidden" id="novoPerfilForm">
+        <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Criar Novo Perfil</div>
+        <div class="campo-row">
+          <div class="field">
+            <label>ID do perfil</label>
+            <input type="text" id="novoId" placeholder="ex: vendas2, supervisor" />
+          </div>
+          <div class="field">
+            <label>Nome exibido</label>
+            <input type="text" id="novoNome" placeholder="ex: Supervisão" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Cor do avatar</label>
+          <div class="cor-grid" id="corGrid"></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="criarPerfil()">Criar Perfil</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleNovoForm()">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- GRID PRINCIPAL -->
+      <div class="config-grid">
+
+        <!-- LISTA DE PERFIS -->
+        <div style="display:flex;flex-direction:column;gap:8px;" id="perfisList">
+          <div class="empty-panel">
+            <div class="empty-panel-icon">⚙️</div>
+            <p>Carregando perfis…</p>
+          </div>
+        </div>
+
+        <!-- PAINEL DE EDIÇÃO -->
+        <div class="config-panel" id="configPanel">
+          <div class="empty-panel">
+            <div class="empty-panel-icon">👈</div>
+            <p>Selecione um perfil para configurar</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/menu.js"></script>
+<script>
+'use strict';
+
+// ── API ──────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const token = localStorage.getItem('expedicao_token') || '';
+  const res = await fetch(path, {
+    ...opts,
+    headers: {
+      'content-type': 'application/json',
+      'authorization': `Bearer ${token}`,
+      ...(opts.headers || {})
+    }
+  });
+  const d = await res.json().catch(() => ({}));
+  if (res.status === 401) { window.location.href = '/login'; return null; }
+  if (!res.ok) throw new Error(d.error || `HTTP ${res.status}`);
+  return d;
+}
+
+let _tt = null;
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function esc(s) {
+  return (s ?? '').toString().replace(/[&<>"']/g, m =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
+}
+
+// ── ESTADO ───────────────────────────────────────────────
+let PERFIS       = [];
+let PERFIL_SEL   = null;
+let MODULOS_SEL  = new Set();
+let TEMA_SEL     = 'dark';
+let COR_SEL      = '#3b82f6';
+let DIRTY        = false;
+
+// Todos os módulos disponíveis
+const ALL_MODULES = [
+  { id: 'pedidos',    label: 'Pedidos do Dia',  icon: '📦', section: 'Operação'  },
+  { id: 'manual',     label: 'Criar Pedido',    icon: '✏️',  section: 'Operação'  },
+  { id: 'bling',      label: 'Pedidos Bling',   icon: '⬡',  section: 'Operação'  },
+  { id: 'admin',      label: 'Produtos Admin',  icon: '🖼️',  section: 'Catálogo'  },
+  { id: 'catalogo',   label: 'Catálogo',        icon: '📋',  section: 'Catálogo'  },
+  { id: 'embalagens', label: 'Embalagens',      icon: '🎁',  section: 'Catálogo'  },
+  { id: 'financas',   label: 'Finanças',        icon: '💰',  section: 'Gestão'    },
+  { id: 'compras',    label: 'Compras',         icon: '🛒',  section: 'Gestão'    },
+  { id: 'importar',   label: 'Importar CSV',    icon: '⬆️',  section: 'Gestão'    },
+  { id: 'index',      label: 'Painel Geral',    icon: '⚡',  section: 'Sistema'   },
+  { id: 'config',     label: 'Configurações',   icon: '⚙️',  section: 'Sistema'   },
+];
+
+const TEMAS = [
+  { id: 'dark',  icon: '🌙', label: 'Dark Navy',          cls: 'preview-dark'  },
+  { id: 'light', icon: '☀️', label: 'Light Profissional', cls: 'preview-light' },
+  { id: 'hc',    icon: '🔆', label: 'Alto Contraste',     cls: 'preview-hc'    },
+  { id: 'ml',    icon: '⬡',  label: 'Tema ML',            cls: 'preview-ml'    },
+];
+
+const CORES = [
+  '#3b82f6', '#10b981', '#f5c842', '#ef4444',
+  '#f97316', '#8b5cf6', '#06b6d4', '#ec4899',
+  '#64748b', '#0f172a',
+];
+
+// ── CARREGAR PERFIS ──────────────────────────────────────
+async function carregarPerfis() {
+  try {
+    const d = await api('/api/perfis');
+    PERFIS = d?.perfis || [];
+    renderPerfisList();
+  } catch(e) {
+    toast(`Erro: ${e.message}`, 'error');
+  }
+}
+
+// ── RENDER LISTA ─────────────────────────────────────────
+function renderPerfisList() {
+  const el = document.getElementById('perfisList');
+  if (!PERFIS.length) {
+    el.innerHTML = '<div class="empty-panel"><div class="empty-panel-icon">⚙️</div><p>Nenhum perfil encontrado.</p></div>';
+    return;
+  }
+
+  el.innerHTML = PERFIS.map(p => {
+    const cor   = p.cor || '#3b82f6';
+    const modCount = (p.modulos || []).length;
+    const temaLabel = TEMAS.find(t => t.id === p.tema)?.label || p.tema || 'Dark Navy';
+    const isSel = PERFIL_SEL?.id === p.id;
+    return `
+      <div class="perfil-card${isSel ? ' selected' : ''}"
+           onclick="selecionarPerfil('${esc(p.id)}')">
+        <div class="perfil-avatar-big" style="background:${esc(cor)}">${esc(p.avatar || p.id.slice(0,2).toUpperCase())}</div>
+        <div class="perfil-info">
+          <div class="perfil-name">${esc(p.nome || p.id)}</div>
+          <div class="perfil-sub">${modCount} módulo${modCount !== 1 ? 's' : ''} · ${esc(p.id)}</div>
+        </div>
+        <span class="perfil-tema-badge">${esc(temaLabel)}</span>
+      </div>`;
+  }).join('');
+}
+
+// ── SELECIONAR PERFIL ────────────────────────────────────
+function selecionarPerfil(id) {
+  if (DIRTY && PERFIL_SEL) {
+    if (!confirm('Você tem alterações não salvas. Deseja descartar?')) return;
+  }
+  PERFIL_SEL  = PERFIS.find(p => p.id === id);
+  MODULOS_SEL = new Set(PERFIL_SEL?.modulos || []);
+  TEMA_SEL    = PERFIL_SEL?.tema || 'dark';
+  COR_SEL     = PERFIL_SEL?.cor  || '#3b82f6';
+  DIRTY       = false;
+  renderPerfisList();
+  renderPanel();
+}
+
+// ── RENDER PAINEL ────────────────────────────────────────
+function renderPanel() {
+  const el = document.getElementById('configPanel');
+  if (!PERFIL_SEL) {
+    el.innerHTML = `<div class="empty-panel">
+      <div class="empty-panel-icon">👈</div>
+      <p>Selecione um perfil para configurar</p>
+    </div>`;
+    return;
+  }
+
+  const p = PERFIL_SEL;
+
+  // Tema grid HTML
+  const temaHtml = TEMAS.map(t => `
+    <div class="tema-option ${t.cls}${TEMA_SEL === t.id ? ' selected' : ''}"
+         onclick="setTema('${t.id}')">
+      <div class="tema-preview">
+        <div class="tema-preview-sidebar"></div>
+        <div class="tema-preview-content"></div>
+      </div>
+      <div class="tema-icon">${t.icon}</div>
+      <div class="tema-label">${t.label}</div>
+    </div>`).join('');
+
+  // Módulos por seção
+  const sections = {};
+  for (const m of ALL_MODULES) {
+    if (!sections[m.section]) sections[m.section] = [];
+    sections[m.section].push(m);
+  }
+  let modulosHtml = '<div class="modulos-grid">';
+  for (const [sec, items] of Object.entries(sections)) {
+    for (const m of items) {
+      const on = MODULOS_SEL.has(m.id);
+      modulosHtml += `
+        <div class="modulo-toggle${on ? ' on' : ''}" onclick="toggleModulo('${m.id}')">
+          <span class="modulo-icon">${m.icon}</span>
+          <div style="flex:1;min-width:0;">
+            <div class="modulo-label">${esc(m.label)}</div>
+            <div class="modulo-section">${sec}</div>
+          </div>
+          <div class="toggle-switch"></div>
+        </div>`;
+    }
+  }
+  modulosHtml += '</div>';
+
+  // Cor do avatar
+  const corHtml = CORES.map(c => `
+    <div class="cor-dot${COR_SEL === c ? ' selected' : ''}"
+         style="background:${c}"
+         onclick="setCor('${c}')"
+         title="${c}"></div>`).join('');
+
+  el.innerHTML = `
+    <div class="config-panel-header">
+      <div class="perfil-avatar-big" id="panelAvatar"
+           style="background:${COR_SEL};width:44px;height:44px;font-size:15px;">
+        ${esc(p.avatar || p.id.slice(0,2).toUpperCase())}
+      </div>
+      <div>
+        <div style="font-family:var(--font-display);font-size:16px;font-weight:800;">
+          ${esc(p.nome || p.id)}
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">ID: ${esc(p.id)}</div>
+      </div>
+    </div>
+
+    <div class="config-panel-body">
+
+      <!-- COR DO AVATAR -->
+      <div class="config-section">
+        <div class="config-section-title">Cor do Avatar</div>
+        <div class="cor-grid">${corHtml}</div>
+      </div>
+
+      <!-- TEMA -->
+      <div class="config-section">
+        <div class="config-section-title">Tema Visual</div>
+        <div class="tema-grid">${temaHtml}</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:12px;color:var(--text-muted);">Pré-visualizar:</span>
+          <button class="btn btn-ghost btn-sm" onclick="previewTema()">
+            👁️ Aplicar tema agora
+          </button>
+        </div>
+      </div>
+
+      <!-- MÓDULOS -->
+      <div class="config-section">
+        <div class="config-section-title">
+          Módulos Acessíveis
+          <span style="font-size:10px;font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;">
+            ${MODULOS_SEL.size} de ${ALL_MODULES.length} ativos
+          </span>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <button class="btn btn-ghost btn-sm" onclick="marcarTodos(true)">Selecionar todos</button>
+          <button class="btn btn-ghost btn-sm" onclick="marcarTodos(false)">Desmarcar todos</button>
+        </div>
+        ${modulosHtml}
+      </div>
+
+    </div>
+
+    <div class="config-footer">
+      <span class="save-status" id="saveStatus">
+        ${DIRTY ? '● Alterações não salvas' : '✓ Salvo'}
+      </span>
+      ${p.id !== 'admin' ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent-red);" onclick="excluirPerfil()">Excluir</button>` : ''}
+      <button class="btn btn-primary" onclick="salvarPerfil()">💾 Salvar</button>
+    </div>`;
+}
+
+// ── AÇÕES ────────────────────────────────────────────────
+function setTema(tema) {
+  TEMA_SEL = tema;
+  DIRTY    = true;
+  renderPanel();
+  setSaveStatus('unsaved');
+}
+
+function previewTema() {
+  if (window.ERPMenu) window.ERPMenu.applyTheme(TEMA_SEL);
+  else document.documentElement.setAttribute('data-theme', TEMA_SEL);
+  toast(`Tema "${TEMA_SEL}" aplicado — salve para manter`, 'info');
+}
+
+function setCor(cor) {
+  COR_SEL = cor;
+  DIRTY   = true;
+  // Atualizar avatar instantaneamente
+  const av = document.getElementById('panelAvatar');
+  if (av) av.style.background = cor;
+  // Atualizar dots
+  document.querySelectorAll('.cor-dot').forEach(d => {
+    d.classList.toggle('selected', d.style.background === cor ||
+      d.style.backgroundColor === cor ||
+      d.getAttribute('style')?.includes(cor));
+  });
+  setSaveStatus('unsaved');
+}
+
+function toggleModulo(id) {
+  if (MODULOS_SEL.has(id)) MODULOS_SEL.delete(id);
+  else MODULOS_SEL.add(id);
+  DIRTY = true;
+
+  const el = document.querySelector(`.modulo-toggle[onclick="toggleModulo('${id}')"]`);
+  if (el) el.classList.toggle('on', MODULOS_SEL.has(id));
+
+  // Atualizar contador
+  const titulo = document.querySelector('.config-section-title span');
+  if (titulo) titulo.textContent = `${MODULOS_SEL.size} de ${ALL_MODULES.length} ativos`;
+
+  setSaveStatus('unsaved');
+}
+
+function marcarTodos(on) {
+  if (on) ALL_MODULES.forEach(m => MODULOS_SEL.add(m.id));
+  else    MODULOS_SEL.clear();
+  DIRTY = true;
+  renderPanel();
+  setSaveStatus('unsaved');
+}
+
+function setSaveStatus(state, msg) {
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  const states = {
+    unsaved: { cls: '',       text: '● Alterações não salvas' },
+    saving:  { cls: 'saving', text: '⟳ Salvando…' },
+    saved:   { cls: 'saved',  text: '✓ Salvo com sucesso' },
+    error:   { cls: 'error',  text: '✕ Erro ao salvar' },
+  };
+  const s = states[state] || states.unsaved;
+  el.className = `save-status ${s.cls}`;
+  el.textContent = msg || s.text;
+}
+
+async function salvarPerfil() {
+  if (!PERFIL_SEL) return;
+  setSaveStatus('saving');
+  try {
+    await api(`/api/perfis/${PERFIL_SEL.id}`, {
+      method:  'PUT',
+      body: JSON.stringify({
+        nome:    PERFIL_SEL.nome,
+        tema:    TEMA_SEL,
+        modulos: [...MODULOS_SEL],
+        cor:     COR_SEL,
+        avatar:  PERFIL_SEL.avatar,
+      })
+    });
+
+    // Atualiza local
+    const idx = PERFIS.findIndex(p => p.id === PERFIL_SEL.id);
+    if (idx >= 0) {
+      PERFIS[idx] = { ...PERFIS[idx], tema: TEMA_SEL, modulos: [...MODULOS_SEL], cor: COR_SEL };
+      PERFIL_SEL  = PERFIS[idx];
+    }
+
+    DIRTY = false;
+    setSaveStatus('saved');
+    renderPerfisList();
+    toast('✓ Perfil salvo! Recarregue o menu para aplicar.', 'ok');
+  } catch(e) {
+    setSaveStatus('error', `✕ ${e.message}`);
+    toast(`Erro: ${e.message}`, 'error');
+  }
+}
+
+async function excluirPerfil() {
+  if (!PERFIL_SEL || PERFIL_SEL.id === 'admin') return;
+  if (!confirm(`Excluir o perfil "${PERFIL_SEL.nome}"? Esta ação não pode ser desfeita.`)) return;
+  try {
+    await api(`/api/perfis/${PERFIL_SEL.id}`, { method: 'DELETE' });
+    PERFIS     = PERFIS.filter(p => p.id !== PERFIL_SEL.id);
+    PERFIL_SEL = null;
+    DIRTY      = false;
+    renderPerfisList();
+    renderPanel();
+    toast('Perfil excluído', 'info');
+  } catch(e) {
+    toast(`Erro: ${e.message}`, 'error');
+  }
+}
+
+// ── NOVO PERFIL ──────────────────────────────────────────
+function toggleNovoForm() {
+  document.getElementById('novoPerfilForm').classList.toggle('hidden');
+}
+
+function buildCorGrid() {
+  const el = document.getElementById('corGrid');
+  if (!el) return;
+  el.innerHTML = CORES.map(c => `
+    <div class="cor-dot${COR_SEL === c ? ' selected' : ''}"
+         style="background:${c}"
+         onclick="setCor('${c}');document.querySelectorAll('#corGrid .cor-dot').forEach(d=>d.classList.toggle('selected',d.style.backgroundColor==='${c}'||d.getAttribute('style').includes('${c}')))"
+         title="${c}"></div>`).join('');
+}
+
+async function criarPerfil() {
+  const id   = document.getElementById('novoId').value.trim().toLowerCase().replace(/\s+/g,'_');
+  const nome = document.getElementById('novoNome').value.trim();
+  if (!id || !nome) { toast('Preencha ID e nome', 'error'); return; }
+  if (PERFIS.find(p => p.id === id)) { toast('ID já existe', 'error'); return; }
+
+  try {
+    const d = await api('/api/perfis', {
+      method: 'POST',
+      body: JSON.stringify({
+        id, nome,
+        tema:    'dark',
+        modulos: ['index'],
+        cor:     COR_SEL,
+        avatar:  nome.slice(0,2).toUpperCase(),
+      })
+    });
+    toast(`✓ Perfil "${nome}" criado!`, 'ok');
+    toggleNovoForm();
+    await carregarPerfis();
+    selecionarPerfil(id);
+  } catch(e) {
+    toast(`Erro: ${e.message}`, 'error');
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────────
+buildCorGrid();
+carregarPerfis();
+
+// Aviso ao sair com alterações não salvas
+window.addEventListener('beforeunload', e => {
+  if (DIRTY) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+</script>
+</body>
+</html>

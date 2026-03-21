@@ -128,24 +128,16 @@
 
       for (const item of items) {
         const active = page === item.id;
-        // Tooltip rico: ícone + label + seção
-        const tooltipHtml = `
-          <span class="nav-tooltip">
-            <span class="nav-tooltip-icon">${item.icon}</span>
-            <span>
-              <span class="nav-tooltip-label">${item.label}</span>
-              <span class="nav-tooltip-section">${item.section}</span>
-            </span>
-          </span>`;
-
         navHtml += `
           <a href="${item.href}"
              class="nav-item${active ? ' active' : ''}"
              aria-label="${item.label}"
-             aria-current="${active ? 'page' : 'false'}">
+             aria-current="${active ? 'page' : 'false'}"
+             data-tip-icon="${item.icon}"
+             data-tip-label="${item.label}"
+             data-tip-section="${item.section}">
             <span class="nav-item-icon" aria-hidden="true">${item.icon}</span>
             <span class="nav-item-label">${item.label}</span>
-            ${tooltipHtml}
           </a>`;
       }
 
@@ -256,19 +248,56 @@
       });
     }
 
-    // ── Desktop: tooltip position fix ─────────────────
-    // O tooltip usa position:fixed mas precisa da posição real do item
+    // ── Desktop: tooltip flutuante (gerado via JS) ────────
+    let _tip = null;
+
+    function showTip(item) {
+      if (!sidebar?.classList.contains('collapsed')) return;
+      removeTip();
+      const icon    = item.dataset.tipIcon    || '';
+      const label   = item.dataset.tipLabel   || item.getAttribute('aria-label') || '';
+      const section = item.dataset.tipSection || '';
+      if (!label) return;
+      const rect = item.getBoundingClientRect();
+      _tip = document.createElement('div');
+      _tip.style.cssText = [
+        'position:fixed',
+        `left:${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w-collapsed') || '56') + 10}px`,
+        `top:${rect.top + rect.height / 2}px`,
+        'transform:translateY(-50%)',
+        'background:var(--tooltip-bg,var(--depth-5))',
+        'color:var(--text-primary)',
+        'border:1px solid var(--tooltip-border,var(--border-default))',
+        'border-radius:var(--r-md)',
+        'padding:8px 13px',
+        'font-family:var(--font-body)',
+        'white-space:nowrap',
+        'pointer-events:none',
+        'z-index:9999',
+        'box-shadow:var(--shadow-md)',
+        'display:flex',
+        'align-items:center',
+        'gap:8px',
+        'font-size:12px',
+        'font-weight:600',
+      ].join(';');
+      _tip.innerHTML = `<span style="font-size:15px">${icon}</span><span><span style="display:block">${label}</span>${section ? `<span style="display:block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-top:1px">${section}</span>` : ''}</span>`;
+      document.body.appendChild(_tip);
+    }
+
+    function removeTip() {
+      if (_tip) { _tip.remove(); _tip = null; }
+    }
+
     if (sidebar) {
       sidebar.addEventListener('mouseover', e => {
         const item = e.target.closest('.nav-item');
-        if (!item || !sidebar.classList.contains('collapsed')) return;
-        const tooltip = item.querySelector('.nav-tooltip');
-        if (!tooltip) return;
-        const rect = item.getBoundingClientRect();
-        tooltip.style.top  = `${rect.top + rect.height / 2}px`;
+        if (item) showTip(item); else removeTip();
       });
+      sidebar.addEventListener('mouseleave', removeTip);
     }
 
+    
     // ── Mobile: abrir/fechar drawer ───────────────────
     function openMobile() {
       sidebar?.classList.add('mobile-open');
