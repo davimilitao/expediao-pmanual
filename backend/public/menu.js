@@ -30,9 +30,9 @@
   // Temas disponíveis
   const THEMES = {
     dark:  { label: 'Dark Navy',         icon: '🌙' },
-    light: { label: 'Light Profissional',icon: '☀️' },
+    light: { label: 'Material You',      icon: '✦'  },
     hc:    { label: 'Alto Contraste',    icon: '🔆' },
-    ml:    { label: 'Tema ML',           icon: '⬡'  },
+    ml:    { label: 'Universo Cosmos',   icon: '🌌' },
   };
 
   // Perfis padrão (fallback se Firestore não tiver nada)

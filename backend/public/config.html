@@ -125,6 +125,23 @@
     .preview-hc     .tema-preview-content  { background: #0f0f0f; }
     .preview-ml     .tema-preview-sidebar  { background: #fff8e0; border-right: 1px solid #fdeea0; }
     .preview-ml     .tema-preview-content  { background: #fffbf0; }
+    .preview-cosmos .tema-preview-sidebar  {
+      background: linear-gradient(180deg, #07091a 0%, #0f1330 100%);
+      border-right: 1px solid rgba(123,47,255,0.3);
+    }
+    .preview-cosmos .tema-preview-content  {
+      background: linear-gradient(135deg, #0a0d1f 0%, #0f1330 100%);
+      position: relative; overflow: hidden;
+    }
+    .preview-cosmos .tema-preview-content::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 20% 30%, rgba(123,47,255,0.8) 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 20%, rgba(0,212,255,0.8) 0%, transparent 100%),
+        radial-gradient(1px 1px at 80% 60%, rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.5) 0%, transparent 100%);
+    }
 
     /* ── MÓDULOS GRID ── */
     .modulos-grid {
@@ -347,10 +364,10 @@ const ALL_MODULES = [
 ];
 
 const TEMAS = [
-  { id: 'dark',  icon: '🌙', label: 'Dark Navy',          cls: 'preview-dark'  },
-  { id: 'light', icon: '☀️', label: 'Light Profissional', cls: 'preview-light' },
-  { id: 'hc',    icon: '🔆', label: 'Alto Contraste',     cls: 'preview-hc'    },
-  { id: 'ml',    icon: '⬡',  label: 'Tema ML',            cls: 'preview-ml'    },
+  { id: 'dark',  icon: '🌙', label: 'Dark Navy',        cls: 'preview-dark'    },
+  { id: 'light', icon: '✦',  label: 'Material You',     cls: 'preview-light'   },
+  { id: 'hc',    icon: '🔆', label: 'Alto Contraste',   cls: 'preview-hc'      },
+  { id: 'ml',    icon: '🌌', label: 'Universo Cosmos',  cls: 'preview-cosmos'  },
 ];
 
 const CORES = [
@@ -381,7 +398,7 @@ function renderPerfisList() {
   el.innerHTML = PERFIS.map(p => {
     const cor   = p.cor || '#3b82f6';
     const modCount = (p.modulos || []).length;
-    const temaLabel = TEMAS.find(t => t.id === p.tema)?.label || p.tema || 'Dark Navy';
+    const temaLabel = TEMAS.find(t => t.id === p.tema)?.label || p.tema || 'Dark';
     const isSel = PERFIL_SEL?.id === p.id;
     return `
       <div class="perfil-card${isSel ? ' selected' : ''}"
